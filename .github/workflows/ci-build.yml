@@ -13,9 +13,5 @@ jobs:
               run: yarn run build
             - name: run localstack
               run: docker-compose up -d
-            - name: download waitforit
-              run: curl -o /usr/local/bin/waitforit -sSL https://github.com/maxcnunes/waitforit/releases/download/v2.4.1/waitforit-linux_amd64 && chmod +x /usr/local/bin/waitforit
-            - name: wait for localstack
-              run: waitforit -address=http://localstack:4571 -timeout=120
             - name: test
               run: yarn test
