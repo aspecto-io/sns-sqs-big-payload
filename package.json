@@ -8,6 +8,7 @@
         "clean": "rm -rf ./dist/*"
     },
     "dependencies": {
+        "aws-sdk": "^2.644.0",
         "uuid": "^7.0.2"
     },
     "devDependencies": {
