@@ -2,7 +2,7 @@
     "compilerOptions": {
         "target": "ES2017",
         "lib": ["ES2017"],
-        "rootDir": "src",
+        "rootDir": "./src",
         "outDir": "dist",
         "module": "commonjs",
         "moduleResolution": "node",
@@ -14,6 +14,6 @@
         "allowSyntheticDefaultImports": true,
         "esModuleInterop": true
     },
-    "include": ["src/**/*", "tests/**/*"],
-    "exclude": ["**/node_modules/*"]
+    "include": ["src/**/*"],
+    "exclude": ["**/node_modules/*", "dist"]
 }

@@ -1,10 +1,11 @@
 {
     "name": "sns-sqs-big-payload",
     "version": "1.0.0",
-    "main": "index.js",
     "license": "MIT",
     "scripts": {
-        "test": "jest"
+        "test": "jest",
+        "build": "npm run clean && tsc",
+        "clean": "rm -rf ./dist/*"
     },
     "dependencies": {
         "uuid": "^7.0.2"
@@ -16,6 +17,17 @@
         "ts-jest": "^25.2.1",
         "typescript": "^3.8.3"
     },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/aspecto-io/sns-sqs-big-payload"
+    },
+    "bugs": {
+        "url": "https://github.com/aspecto-io/sns-sqs-big-payload/issues"
+    },
+    "homepage": "https://github.com/aspecto-io/sns-sqs-big-payload",
+    "prepublish": "tsc",
+    "main": "./build/index.js",
+    "types": "./build/index.d.ts",
     "jest": {
         "preset": "ts-jest",
         "testMatch": [
@@ -38,5 +50,14 @@
     },
     "peerDependencies": {
         "aws-sdk": "^2.643.0"
-    }
+    },
+    "keywords": [
+        "sqs",
+        "sns",
+        "queue",
+        "consumer",
+        "large",
+        "big",
+        "payload"
+    ]
 }
