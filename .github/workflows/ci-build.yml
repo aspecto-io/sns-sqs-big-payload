@@ -16,5 +16,7 @@ jobs:
               run: yarn run build
             - name: run localstack
               run: docker-compose up -d
+            - name: wait for localstack
+              run: ./scripts/wait-for-url.js http://localhost:4575 && ./scripts/wait-for-url.js http://localhost:4572 && ./scripts/wait-for-url.js http://localhost:4576
             - name: test
               run: yarn test
