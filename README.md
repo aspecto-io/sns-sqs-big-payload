@@ -2,13 +2,13 @@
 
 SQS/SNS producer/consumer library. Provides an ability to pass payloads though s3.
 
-# Instalation
+## Instalation
 
 ```
 npm install sns-sqs-big-payload
 ```
 
-# Usage
+## Usage
 
 The library exports 3 clients:
 
@@ -19,7 +19,7 @@ The library exports 3 clients:
 The reason they belong to the same repository and npm package
 is that ther're is kind of a contract that they all share when sending the payload though S3.
 
-## SNS Producer
+### SNS Producer
 
 ```ts
 import { SnsProducer } from 'sns-sqs-big-payload';
@@ -37,7 +37,7 @@ await snsProducer.sendJSON({
 });
 ```
 
-## SQS Producer
+### SQS Producer
 
 ```ts
 import { SqsProducer } from 'sns-sqs-big-payload';
@@ -55,7 +55,7 @@ await sqsProducer.sendJSON({
 });
 ```
 
-## SQS Consumer
+### SQS Consumer
 
 ```ts
 import { SqsConsumer } from 'sns-sqs-big-payload';
@@ -92,7 +92,7 @@ sqsConsumer.stop();
 -   Throwing an error (or returning a rejected promise) from the handler function will cause the message to be left on the queue. An SQS redrive policy can be used to move messages that cannot be processed to a dead letter queue.
 -   By default messages are processed by 10 at a time – a new batch won't be received until the previous one is processed. To adjust number of messages that is being processed in parallel, use the `batchSize` option detailed below.
 
-# Credentials
+## Credentials
 
 By default the consumer will look for AWS credentials in the places [specified by the AWS SDK](https://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/configuring-the-jssdk.html#Setting_AWS_Credentials). The simplest option is to export your credentials as environment variables:
 
@@ -124,7 +124,7 @@ const consumer = SqsConsumer.create({
 consumer.start();
 ```
 
-# Events and logging
+## Events and logging
 
 SqsConsumer has an [EventEmitter](https://nodejs.org/api/events.html) and send the following events:
 
@@ -158,7 +158,7 @@ enum SqsConsumerEvents {
 
 You may subscribe to those events to add logging for example.
 
-# Testing
+## Testing
 
 Since this library relies heavily on AWS API there's not much sense to test it in isolation by using mocks.
 So in order to run test you either need to have local stack or use a real sqs queues and sns topics.
