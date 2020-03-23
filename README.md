@@ -161,4 +161,4 @@ You may subscribe to those events to add logging for example.
 # Testing
 
 Since this library relies heavily on AWS API there's not much sense to test it in isolation by using mocks.
-So in order to run test you either need to have local stack or use a real sqs queus and sns topics.
+So in order to run test you either need to have local stack or use a real sqs queues and sns topics.
