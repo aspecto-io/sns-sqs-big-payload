@@ -7,10 +7,9 @@ import { PayloadMeta, S3PayloadMeta } from './types';
 export interface SqsConsumerOptions {
     queueUrl: string;
     region?: string;
-    getPayloadFromS3?: boolean;
     batchSize?: number;
     waitTimeSeconds?: number;
-    s3Bucket?: string;
+    getPayloadFromS3?: boolean;
     sqs?: aws.SQS;
     s3?: aws.S3;
     handleMessage?(message: SqsMessage): Promise<void>;
@@ -83,9 +82,9 @@ export class SqsConsumer {
 
     start(): void {
         if (this.started) return;
-        this.events.emit(SqsConsumerEvents.started);
         this.started = true;
         this.poll();
+        this.events.emit(SqsConsumerEvents.started);
     }
 
     stop(): void {
@@ -141,7 +140,7 @@ export class SqsConsumer {
             await this.deleteMessage(message);
             this.events.emit(SqsConsumerEvents.messageProcessed, message);
         } catch (err) {
-            this.events.emit(SqsConsumerEvents.processingError, err);
+            this.events.emit(SqsConsumerEvents.processingError, { err, message });
         }
     }
 
@@ -159,7 +158,7 @@ export class SqsConsumer {
                     .promise();
                 return s3Response.Body;
             } catch (err) {
-                this.events.emit(SqsConsumerEvents.s3PayloadError, err);
+                this.events.emit(SqsConsumerEvents.s3PayloadError, { err, message: msgJson });
                 throw err;
             }
         }

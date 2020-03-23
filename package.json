@@ -1,5 +1,5 @@
 {
-    "name": "aspecto-sns-sqs-client",
+    "name": "sns-sqs-big-payload",
     "version": "1.0.0",
     "main": "index.js",
     "license": "MIT",
