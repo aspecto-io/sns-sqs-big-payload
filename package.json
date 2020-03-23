@@ -49,9 +49,6 @@
         "testEnvironment": "node",
         "maxConcurrency": 1
     },
-    "peerDependencies": {
-        "aws-sdk": "^2.643.0"
-    },
     "keywords": [
         "sqs",
         "sns",
