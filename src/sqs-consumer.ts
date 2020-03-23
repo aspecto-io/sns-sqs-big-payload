@@ -12,6 +12,8 @@ export interface SqsConsumerOptions {
     getPayloadFromS3?: boolean;
     sqs?: aws.SQS;
     s3?: aws.S3;
+    sqsEndpointUrl?: string;
+    s3EndpointUrl?: string;
     handleMessage?(message: SqsMessage): Promise<void>;
     parsePayload?(payload: any): any;
     transformMessageBody?(messageBody: any): any;
@@ -55,6 +57,7 @@ export class SqsConsumer {
         } else {
             this.sqs = new aws.SQS({
                 region: options.region,
+                endpoint: options.sqsEndpointUrl,
             });
         }
         if (options.getPayloadFromS3 || options.getPayloadFromS3) {
@@ -63,6 +66,7 @@ export class SqsConsumer {
             } else {
                 this.s3 = new aws.S3({
                     region: options.region,
+                    endpoint: options.s3EndpointUrl,
                 });
             }
         }
@@ -102,6 +106,7 @@ export class SqsConsumer {
             WaitTimeSeconds: this.waitTimeSeconds,
         })
             .then((response) => {
+                if (!this.started) return;
                 this.handleSqsResponse(response);
             })
             .catch((err) => {

@@ -10,6 +10,8 @@ export interface SnsProducerOptions {
     s3Bucket?: string;
     sns?: aws.SNS;
     s3?: aws.S3;
+    snsEndpointUrl?: string;
+    s3EndpointUrl?: string;
 }
 
 export interface PublishResult {
@@ -35,6 +37,7 @@ export class SnsProducer {
         } else {
             this.sns = new aws.SNS({
                 region: options.region,
+                endpoint: options.snsEndpointUrl,
             });
         }
         if (options.allPayloadThoughS3 || options.largePayloadThoughS3) {
@@ -43,6 +46,7 @@ export class SnsProducer {
             } else {
                 this.s3 = new aws.S3({
                     region: options.region,
+                    endpoint: options.s3EndpointUrl,
                 });
             }
         }

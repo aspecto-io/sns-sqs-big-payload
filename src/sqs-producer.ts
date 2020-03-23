@@ -13,6 +13,8 @@ export interface SqsProducerOptions {
     s3Bucket?: string;
     sqs?: aws.SQS;
     s3?: aws.S3;
+    sqsEndpointUrl?: string;
+    s3EndpointUrl?: string;
 }
 
 export interface SqsMessageOptions {
@@ -35,6 +37,7 @@ export class SqsProducer {
         } else {
             this.sqs = new aws.SQS({
                 region: options.region,
+                endpoint: options.sqsEndpointUrl,
             });
         }
         if (options.largePayloadThoughS3 || options.allPayloadThoughS3) {
@@ -43,6 +46,7 @@ export class SqsProducer {
             } else {
                 this.s3 = new aws.S3({
                     region: options.region,
+                    endpoint: options.s3EndpointUrl,
                 });
             }
         }
