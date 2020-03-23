@@ -1,4 +1,4 @@
-# aspsecto-sns-sqs-client
+# sns-sqs-bit-payload
 
 SQS/SNS producer/consumer library. Provides an ability to pass payloads though s3.
 
