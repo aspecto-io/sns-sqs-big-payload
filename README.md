@@ -1,4 +1,4 @@
-# sns-sqs-bit-payload
+# sns-sqs-big-payload
 
 SQS/SNS producer/consumer library. Provides an ability to pass payloads though s3.
 
