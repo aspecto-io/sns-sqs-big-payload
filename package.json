@@ -2,6 +2,8 @@
     "name": "sns-sqs-big-payload",
     "version": "0.0.2",
     "license": "MIT",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
     "scripts": {
         "test": "jest",
         "build": "npm run clean && tsc",
@@ -16,8 +18,7 @@
         "@types/node": "^13.9.2",
         "jest": "^25.1.0",
         "ts-jest": "^25.2.1",
-        "typescript": "^3.8.3",
-        "wait-on": "^4.0.1"
+        "typescript": "^3.8.3"
     },
     "repository": {
         "type": "git",
@@ -28,8 +29,6 @@
     },
     "homepage": "https://github.com/aspecto-io/sns-sqs-big-payload",
     "prepublish": "tsc",
-    "main": "./build/index.js",
-    "types": "./build/index.d.ts",
     "jest": {
         "preset": "ts-jest",
         "testMatch": [

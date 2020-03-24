@@ -3,3 +3,6 @@
 /node_modules
 /.github
 /scripts
+.prettierrc
+docker-compose.yml
+.editorconfig
