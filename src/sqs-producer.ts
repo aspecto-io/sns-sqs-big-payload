@@ -41,6 +41,11 @@ export class SqsProducer {
             });
         }
         if (options.largePayloadThoughS3 || options.allPayloadThoughS3) {
+            if (!options.s3Bucket) {
+                throw new Error(
+                    'Need to specify "s3Bucket" option when using allPayloadThoughS3 or  largePayloadThoughS3.'
+                );
+            }
             if (options.s3) {
                 this.s3 = options.s3;
             } else {
