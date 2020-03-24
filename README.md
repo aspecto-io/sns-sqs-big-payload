@@ -6,9 +6,7 @@ SQS/SNS producer/consumer library. Provides an ability to pass payloads though s
 
 ## Motivation
 
-[Aspecto](https://www.aspecto.io/) helps modern development teams solve production issues before they evolve. We dramatically reduce bugs by leveraging production data in pre-production phases. Using deep API analysis, Aspecto can autogenerate tests, monitor the stability of your services and serve developers with all the service-oriented data they need, as they code.
-
-We've created this library in order to overcome AWS size limit for SNS & SQS messages. This library enables you to manage Amazon SNS & SQS message payloads with Amazon S3 when dealing with payloads larger than 256KB. Key functionality includes:
+[Aspecto](https://www.aspecto.io/) helps modern development teams solve production issues before they evolve. We collect real production data and perform deep API analysis over it to autogenerate tests and monitor services stability. As a result, we often need to handle large payloads which can't be used with SQS & SNS due to the hard size limit. This library was developed to overcome this challenge - it enables you to manage Amazon SNS & SQS message payloads with Amazon S3 when dealing with payloads larger than 256KB. Key functionality includes:
 
 -   Controlling whether message payloads are always stored in Amazon S3 or only when a message's size exceeds 256KB.
 -   Send a message that references a single message object stored in an Amazon S3 bucket.
