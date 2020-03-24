@@ -130,7 +130,7 @@ export class SqsConsumer {
     }
 
     private async handleSqsResponse(result: ReceiveMessageResult): Promise<void> {
-        if (result) {
+        if (result && result.Messages) {
             await Promise.all(result.Messages.map((message) => this.processMessage(message)));
         }
     }

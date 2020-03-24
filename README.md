@@ -4,11 +4,24 @@
 
 SQS/SNS producer/consumer library. Provides an ability to pass payloads though s3.
 
+## Motivation
+
+[Aspecto](https://www.aspecto.io/?utm_source=github&utm_medium=sqs-sns-big-payload&utm_campaign=readme-p1&utm_content=v1) helps modern development teams solve production issues before they evolve. We collect real production data and perform deep API analysis over it to autogenerate tests and monitor services stability. As a result, we often need to handle large payloads which can't be used with SQS & SNS due to the hard size limit. This library was developed to overcome this challenge - it enables you to manage Amazon SNS & SQS message payloads with Amazon S3 when dealing with payloads larger than 256KB. Key functionality includes:
+
+-   Controlling whether message payloads are always stored in Amazon S3 or only when a message's size exceeds 256KB.
+-   Send a message that references a single message object stored in an Amazon S3 bucket.
+-   Get the corresponding message object from an Amazon S3 bucket.
+-   Handle the interface for large messages between SNS to SQS via S3 bucket in the middle
+
 ## Instalation
 
 ```
 npm install sns-sqs-big-payload
 ```
+
+Important:
+
+> Make sure you also have `aws-sdk` installed, bacause it's listed as a peer dependency, so won't be installed automatically.
 
 ## Usage
 
@@ -18,8 +31,7 @@ The library exports 3 clients:
 -   SQS producer
 -   SQS consumer
 
-The reason they belong to the same repository and npm package
-is that ther're is kind of a contract that they all share when sending the payload though S3.
+All 3 clients are under the same repository since they share a similar contract when sending payloads via S3.
 
 ### SNS Producer
 
@@ -162,10 +174,16 @@ You may subscribe to those events to add logging for example.
 
 ## Testing
 
-Since this library relies heavily on AWS API there's not much sense to test it in isolation by using mocks.
-So in order to run test you either need to have local stack or use a real sqs queues and sns topics.
+Since this library heavily relies on AWS APIs, it is less relevant to run an isolated test using mocks. As a result, we recommend testing it using a [localstack](https://github.com/localstack/localstack) or by using real SQS queues and SNS topics.
 
 To run localstack on mac:
+
 ```sh
 TMPDIR=/private$TMPDIR docker-compose up
+```
+
+To run unit tests:
+
+```sh
+npm test
 ```
