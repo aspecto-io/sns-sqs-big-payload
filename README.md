@@ -1,3 +1,5 @@
+![Build PR](https://github.com/aspecto-io/sns-sqs-big-payload/workflows/Build%20PR/badge.svg?branch=master)
+
 # sns-sqs-big-payload
 
 SQS/SNS producer/consumer library. Provides an ability to pass payloads though s3.
