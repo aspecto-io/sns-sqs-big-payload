@@ -145,7 +145,14 @@ consumer.start();
 
 ## Events and logging
 
-SqsConsumer has an [EventEmitter](https://nodejs.org/api/events.html) and send the following events:
+SqsConsumer has an internal [EventEmitter](https://nodejs.org/api/events.html), you can subscribe for events like this:
+```ts
+sqsConsumer.on(SqsConsumerEvents.messageProcessed, () => {
+    // ...
+});
+```
+
+It sends the following events:
 
 | Event               | Params           | Description                                                                         |
 | ------------------- | ---------------- | ----------------------------------------------------------------------------------- |
