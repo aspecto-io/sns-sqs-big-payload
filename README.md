@@ -72,7 +72,7 @@ await sqsProducer.sendJSON({
 ### SQS Consumer
 
 ```ts
-import { SqsConsumer } from 'sns-sqs-big-payload';
+import { SqsConsumer, SqsConsumerEvents } from 'sns-sqs-big-payload';
 
 const sqsConsumer = SqsConsumer.create({
     queueUrl: '...',
@@ -93,6 +93,11 @@ const sqsConsumer = SqsConsumer.create({
     handleMessage: async ({ payload }) => {
         // ...
     },
+});
+
+// to subscribe for events
+sqsConsumer.on(SqsConsumerEvents.messageProcessed, () => {
+    // ...
 });
 
 sqsConsumer.start();

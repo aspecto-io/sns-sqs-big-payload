@@ -19,9 +19,10 @@ export interface SqsConsumerOptions {
     transformMessageBody?(messageBody: any): any;
 }
 
-enum SqsConsumerEvents {
+export enum SqsConsumerEvents {
     started = 'started',
     messageReceived = 'message-received',
+    messageParsed = 'message-parsed',
     messageProcessed = 'message-processed',
     stopped = 'stopped',
     error = 'error',
@@ -96,6 +97,10 @@ export class SqsConsumer {
         this.events.emit(SqsConsumerEvents.stopped);
     }
 
+    on(event: string | symbol, handler: (...args: any) => void): void {
+        this.events.on(event, handler);
+    }
+
     private poll(): void {
         if (!this.started) return;
         let currentPollingInterval = this.pollingInterval;
@@ -141,7 +146,10 @@ export class SqsConsumer {
             const messageBody = this.transformMessageBody ? this.transformMessageBody(message.Body) : message.Body;
             const rawPayload = await this.getMessagePayload(messageBody);
             const payload = this.parseMessagePayload(rawPayload);
-            await this.handleMessage({ payload, message });
+            this.events.emit(SqsConsumerEvents.messageParsed, { message, payload });
+            if (this.handleMessage) {
+                await this.handleMessage({ payload, message });
+            }
             await this.deleteMessage(message);
             this.events.emit(SqsConsumerEvents.messageProcessed, message);
         } catch (err) {

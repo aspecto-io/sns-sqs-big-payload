@@ -1,4 +1,5 @@
 import {
+    SqsConsumerEvents,
     SqsProducer,
     SqsConsumer,
     SqsProducerOptions,
@@ -93,9 +94,13 @@ async function publishMessage(msg: any, options: Partial<SnsProducerOptions> = {
     await snsProducer.publishJSON(msg);
 }
 
-async function receiveMessages(expectedMsgsCount: number, options: Partial<SqsConsumerOptions> = {}): Promise<any> {
+async function receiveMessages(
+    expectedMsgsCount: number,
+    options: Partial<SqsConsumerOptions> = {},
+    eventHandlers?: Record<string | symbol, (...args) => void>
+): Promise<any> {
     const { s3 } = getClients();
-    return new Promise((res, rej) => {
+    return new Promise((resolve, rej) => {
         const messages = [];
         let timeoutId;
 
@@ -103,17 +108,36 @@ async function receiveMessages(expectedMsgsCount: number, options: Partial<SqsCo
             queueUrl: TEST_QUEUE_URL,
             region: TEST_REGION,
             parsePayload: (raw) => JSON.parse(raw),
-            handleMessage: async ({ payload }) => {
-                messages.push(payload);
-                if (messages.length === expectedMsgsCount) {
-                    sqsConsumer.stop();
-                    clearTimeout(timeoutId);
-                    res(messages);
-                }
-            },
             ...options,
             s3,
         });
+
+        sqsConsumer.on(SqsConsumerEvents.messageParsed, ({ payload }) => {
+            messages.push(payload);
+        });
+
+        sqsConsumer.on(SqsConsumerEvents.messageProcessed, () => {
+            if (messages.length === expectedMsgsCount) {
+                sqsConsumer.stop();
+                clearTimeout(timeoutId);
+                resolve(messages);
+            }
+        });
+
+        sqsConsumer.on(SqsConsumerEvents.error, () => {
+            sqsConsumer.stop();
+            clearTimeout(timeoutId);
+        });
+
+        sqsConsumer.on(SqsConsumerEvents.processingError, () => {
+            sqsConsumer.stop();
+            clearTimeout(timeoutId);
+            resolve();
+        });
+
+        if (eventHandlers) {
+            Object.entries(eventHandlers).forEach(([event, handler]) => sqsConsumer.on(event, handler));
+        }
 
         timeoutId = setTimeout(() => {
             rej(new Error("Timeout: SqsConsumer didn't get any messages for 5 seconds."));
@@ -150,6 +174,61 @@ describe('sns-sqs-big-payload', () => {
                 sendMessage(message);
                 const [receivedMessage] = await receiveMessages(1);
                 expect(receivedMessage).toEqual(message);
+            });
+        });
+
+        describe('events', () => {
+            function getEventHandlers() {
+                const handlers = Object.keys(SqsConsumerEvents).reduce((acc, key) => {
+                    acc[SqsConsumerEvents[key]] = jest.fn();
+                    return acc;
+                }, {});
+                return handlers;
+            }
+
+            it('should trigger success events event', async () => {
+                const message = { it: 'works' };
+                const handlers = getEventHandlers();
+                sendMessage(message);
+                const [receivedMessage] = await receiveMessages(1, {}, handlers);
+                expect(receivedMessage).toEqual(message);
+
+                // success
+                expect(handlers[SqsConsumerEvents.started]).toBeCalled();
+                expect(handlers[SqsConsumerEvents.messageReceived]).toBeCalled();
+                expect(handlers[SqsConsumerEvents.messageParsed]).toBeCalled();
+                expect(handlers[SqsConsumerEvents.messageProcessed]).toBeCalled();
+                expect(handlers[SqsConsumerEvents.stopped]).toBeCalled();
+                // errors
+                expect(handlers[SqsConsumerEvents.error]).not.toBeCalled();
+                expect(handlers[SqsConsumerEvents.processingError]).not.toBeCalled();
+                expect(handlers[SqsConsumerEvents.payloadParseError]).not.toBeCalled();
+                expect(handlers[SqsConsumerEvents.s3PayloadError]).not.toBeCalled();
+                expect(handlers[SqsConsumerEvents.connectionError]).not.toBeCalled();
+            });
+
+            it('should should trigger processingError event', async () => {
+                const message = { it: 'works' };
+                const handlers = getEventHandlers();
+                sendMessage(message);
+                await receiveMessages(
+                    1,
+                    {
+                        handleMessage: () => {
+                            throw new Error('Processing error');
+                        },
+                    },
+                    handlers
+                );
+
+                // errors
+                expect(handlers[SqsConsumerEvents.messageReceived]).toBeCalled();
+                expect(handlers[SqsConsumerEvents.messageParsed]).toBeCalled();
+                expect(handlers[SqsConsumerEvents.processingError]).toBeCalled();
+                expect(handlers[SqsConsumerEvents.messageProcessed]).not.toBeCalled();
+                expect(handlers[SqsConsumerEvents.error]).not.toBeCalled();
+                expect(handlers[SqsConsumerEvents.connectionError]).not.toBeCalled();
+                expect(handlers[SqsConsumerEvents.payloadParseError]).not.toBeCalled();
             });
         });
 
