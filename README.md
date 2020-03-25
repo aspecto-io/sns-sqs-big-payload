@@ -72,7 +72,7 @@ await sqsProducer.sendJSON({
 ### SQS Consumer
 
 ```ts
-import { SqsConsumer } from 'sns-sqs-big-payload';
+import { SqsConsumer, SqsConsumerEvents } from 'sns-sqs-big-payload';
 
 const sqsConsumer = SqsConsumer.create({
     queueUrl: '...',
@@ -93,6 +93,11 @@ const sqsConsumer = SqsConsumer.create({
     handleMessage: async ({ payload }) => {
         // ...
     },
+});
+
+// to subscribe for events
+sqsConsumer.on(SqsConsumerEvents.messageProcessed, () => {
+    // ...
 });
 
 sqsConsumer.start();
@@ -140,7 +145,14 @@ consumer.start();
 
 ## Events and logging
 
-SqsConsumer has an [EventEmitter](https://nodejs.org/api/events.html) and send the following events:
+SqsConsumer has an internal [EventEmitter](https://nodejs.org/api/events.html), you can subscribe for events like this:
+```ts
+sqsConsumer.on(SqsConsumerEvents.messageProcessed, () => {
+    // ...
+});
+```
+
+It sends the following events:
 
 | Event               | Params           | Description                                                                         |
 | ------------------- | ---------------- | ----------------------------------------------------------------------------------- |
