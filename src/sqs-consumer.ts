@@ -112,7 +112,7 @@ export class SqsConsumer {
         })
             .then((response) => {
                 if (!this.started) return;
-                this.handleSqsResponse(response);
+                return this.handleSqsResponse(response);
             })
             .catch((err) => {
                 if (this.isConnError(err)) {
