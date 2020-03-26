@@ -39,7 +39,7 @@ All 3 clients are under the same repository since they share a similar contractÂ
 import { SnsProducer } from 'sns-sqs-big-payload';
 
 const snsProducer = SnsProducer.create({
-    topicArn: '<queue-url>',
+    topicArn: '<topic-arn>',
     region: 'us-east-1',
     // to enable sending large payloads (>256KiB) though S3
     largePayloadThoughS3: true,
