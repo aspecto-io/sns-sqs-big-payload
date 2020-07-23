@@ -43,7 +43,7 @@ const snsProducer = SnsProducer.create({
     region: 'us-east-1',
     // to enable sending large payloads (>256KiB) though S3
     largePayloadThoughS3: true,
-    s3Bucket: '...',
+    s3EndpointUrl: '...',
 });
 
 await snsProducer.sendJSON({

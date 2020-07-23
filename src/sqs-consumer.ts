@@ -46,7 +46,6 @@ export class SqsConsumer {
     private waitTimeSeconds: number;
     private started = false;
     private events = new EventEmitter();
-    private pollingInterval = 1000;
     private connErrorTimeout = 10000;
     private handleMessage?: (message: SqsMessage) => Promise<void>;
     private parsePayload?: (payload: any) => any;
@@ -101,33 +100,26 @@ export class SqsConsumer {
         this.events.on(event, handler);
     }
 
-    private poll(): void {
-        if (!this.started) return;
-        let currentPollingInterval = this.pollingInterval;
-
-        this.receiveMessages({
-            QueueUrl: this.queueUrl,
-            MaxNumberOfMessages: this.batchSize,
-            WaitTimeSeconds: this.waitTimeSeconds,
-        })
-            .then((response) => {
+    private async poll() {
+        while(this.started) {
+            try {
+                const response = await this.receiveMessages({
+                    QueueUrl: this.queueUrl,
+                    MaxNumberOfMessages: this.batchSize,
+                    WaitTimeSeconds: this.waitTimeSeconds,
+                });
                 if (!this.started) return;
-                return this.handleSqsResponse(response);
-            })
-            .catch((err) => {
+                await this.handleSqsResponse(response);    
+            }
+            catch (err) {
                 if (this.isConnError(err)) {
                     this.events.emit(SqsConsumerEvents.connectionError, err);
-                    currentPollingInterval = this.connErrorTimeout;
+                    await new Promise(resolve => setTimeout(resolve, this.connErrorTimeout));
                 } else {
                     this.events.emit(SqsConsumerEvents.error, err);
                 }
-            })
-            .then(() => {
-                setTimeout(this.poll.bind(this), currentPollingInterval);
-            })
-            .catch((err) => {
-                this.events.emit('error', err);
-            });
+            }
+        }
     }
 
     private isConnError(err: AWSError): Boolean {
