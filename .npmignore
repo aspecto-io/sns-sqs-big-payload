@@ -4,5 +4,9 @@
 /.github
 /scripts
 .prettierrc
+src
+tsconfig.json
+.npmignore
+tests
 docker-compose.yml
 .editorconfig

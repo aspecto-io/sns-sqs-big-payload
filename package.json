@@ -1,13 +1,14 @@
 {
     "name": "sns-sqs-big-payload",
-    "version": "0.0.6",
+    "version": "0.0.7",
     "license": "MIT",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "scripts": {
         "test": "jest",
-        "build": "npm run clean && tsc",
-        "clean": "rm -rf ./dist/*"
+        "build": "yarn clean && tsc",
+        "clean": "rm -rf ./dist/*",
+        "prepublishOnly": "yarn build"
     },
     "dependencies": {
         "uuid": "^7.0.2"
