@@ -16,6 +16,6 @@ jobs:
           scope: '@octocat' # Defaults to the user or organization that owns the workflow file
       - run: yarn
       - run: yarn build
-      - run: yarn publish
+      - run: YARN_REGISTRY='https://registry.npmjs.org' yarn publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
