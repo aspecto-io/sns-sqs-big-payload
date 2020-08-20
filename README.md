@@ -146,6 +146,7 @@ consumer.start();
 ## Events and logging
 
 SqsConsumer has an internal [EventEmitter](https://nodejs.org/api/events.html), you can subscribe for events like this:
+
 ```ts
 sqsConsumer.on(SqsConsumerEvents.messageProcessed, () => {
     // ...
@@ -159,6 +160,8 @@ It sends the following events:
 | started             | None             | Fires when the polling is started                                                   |
 | message-received    | `message`        | Fires when a message is received (one per each message, not per batch)              |
 | message-processed   | `message`        | Fires after the message is successfully processed and removed from the queue        |
+| batch-processed     | None             | Fires after the current batch of messages is processed.                             |
+| poll-ended          | None             | Fires after the polling cycle is ended. Useful for graceful shutdown.               |
 | stopped             | None             | Fires when the polling stops                                                        |
 | error               | `{err, message}` | Fires in case of processing error                                                   |
 | s3-payload-error    | `{err, message}` | Fires when an error ocurrs during downloading payload from s3                       |
@@ -173,6 +176,8 @@ enum SqsConsumerEvents {
     started = 'started',
     messageReceived = 'message-received',
     messageProcessed = 'message-processed',
+    batchProcessed = 'batch-processed',
+    pollEnded = 'poll-ended',
     stopped = 'stopped',
     error = 'error',
     s3PayloadError = 's3-payload-error',

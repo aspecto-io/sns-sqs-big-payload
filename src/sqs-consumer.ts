@@ -24,7 +24,9 @@ export enum SqsConsumerEvents {
     messageReceived = 'message-received',
     messageParsed = 'message-parsed',
     messageProcessed = 'message-processed',
+    batchProcessed = 'batch-processed',
     stopped = 'stopped',
+    pollEnded = 'poll-ended',
     error = 'error',
     s3PayloadError = 's3-payload-error',
     processingError = 'processing-error',
@@ -101,7 +103,7 @@ export class SqsConsumer {
     }
 
     private async poll() {
-        while(this.started) {
+        while (this.started) {
             try {
                 const response = await this.receiveMessages({
                     QueueUrl: this.queueUrl,
@@ -109,17 +111,18 @@ export class SqsConsumer {
                     WaitTimeSeconds: this.waitTimeSeconds,
                 });
                 if (!this.started) return;
-                await this.handleSqsResponse(response);    
-            }
-            catch (err) {
+                await this.handleSqsResponse(response);
+            } catch (err) {
                 if (this.isConnError(err)) {
                     this.events.emit(SqsConsumerEvents.connectionError, err);
-                    await new Promise(resolve => setTimeout(resolve, this.connErrorTimeout));
+                    await new Promise((resolve) => setTimeout(resolve, this.connErrorTimeout));
                 } else {
                     this.events.emit(SqsConsumerEvents.error, err);
                 }
             }
+            this.events.emit(SqsConsumerEvents.batchProcessed);
         }
+        this.events.emit(SqsConsumerEvents.pollEnded);
     }
 
     private isConnError(err: AWSError): Boolean {

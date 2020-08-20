@@ -191,6 +191,8 @@ describe('sns-sqs-big-payload', () => {
                 const handlers = getEventHandlers();
                 sendMessage(message);
                 const [receivedMessage] = await receiveMessages(1, {}, handlers);
+                // trigger macrotask to call event handlers
+                await new Promise((res) => setTimeout(res));
                 expect(receivedMessage).toEqual(message);
 
                 // success
@@ -198,6 +200,8 @@ describe('sns-sqs-big-payload', () => {
                 expect(handlers[SqsConsumerEvents.messageReceived]).toBeCalled();
                 expect(handlers[SqsConsumerEvents.messageParsed]).toBeCalled();
                 expect(handlers[SqsConsumerEvents.messageProcessed]).toBeCalled();
+                expect(handlers[SqsConsumerEvents.batchProcessed]).toBeCalled();
+                expect(handlers[SqsConsumerEvents.pollEnded]).toBeCalled();
                 expect(handlers[SqsConsumerEvents.stopped]).toBeCalled();
                 // errors
                 expect(handlers[SqsConsumerEvents.error]).not.toBeCalled();
