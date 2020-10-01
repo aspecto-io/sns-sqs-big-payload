@@ -1,4 +1,4 @@
-![Build PR](https://github.com/aspecto-io/sns-sqs-big-payload/workflows/Build%20PR/badge.svg?branch=master)
+![Build](https://github.com/aspecto-io/sns-sqs-big-payload/workflows/Build/badge.svg) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com) [![TypeScript](https://badgen.net/npm/types/env-var)](http://www.typescriptlang.org/) [![NPM version](https://img.shields.io/npm/v/sns-sqs-big-payload.svg)](https://www.npmjs.com/package/sns-sqs-big-payload)
 
 # sns-sqs-big-payload
 
