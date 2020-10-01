@@ -19,6 +19,10 @@ export interface SqsConsumerOptions {
     transformMessageBody?(messageBody: any): any;
 }
 
+export interface ProcessingOptions {
+    deleteAfterProcessing?: boolean;
+}
+
 export enum SqsConsumerEvents {
     started = 'started',
     messageReceived = 'message-received',
@@ -102,6 +106,10 @@ export class SqsConsumer {
         this.events.on(event, handler);
     }
 
+    async processMessage(message: Message, options: ProcessingOptions) {
+        await this.processMsg(message, options);
+    }
+
     private async poll() {
         while (this.started) {
             try {
@@ -131,11 +139,14 @@ export class SqsConsumer {
 
     private async handleSqsResponse(result: ReceiveMessageResult): Promise<void> {
         if (result && result.Messages) {
-            await Promise.all(result.Messages.map((message) => this.processMessage(message)));
+            await Promise.all(result.Messages.map((message) => this.processMsg(message)));
         }
     }
 
-    private async processMessage(message: Message): Promise<void> {
+    private async processMsg(
+        message: Message,
+        { deleteAfterProcessing = true }: ProcessingOptions = {}
+    ): Promise<void> {
         try {
             this.events.emit(SqsConsumerEvents.messageReceived, message);
             const messageBody = this.transformMessageBody ? this.transformMessageBody(message.Body) : message.Body;
@@ -145,7 +156,9 @@ export class SqsConsumer {
             if (this.handleMessage) {
                 await this.handleMessage({ payload, message });
             }
-            await this.deleteMessage(message);
+            if (deleteAfterProcessing) {
+                await this.deleteMessage(message);
+            }
             this.events.emit(SqsConsumerEvents.messageProcessed, message);
         } catch (err) {
             this.events.emit(SqsConsumerEvents.processingError, { err, message });

@@ -3,7 +3,7 @@ version: '2.1'
 services:
     localstack:
         container_name: '${LOCALSTACK_DOCKER_NAME-localstack_main}'
-        image: localstack/localstack
+        image: localstack/localstack:0.10.7
         ports:
             - '4567-4599:4567-4599'
             - '${PORT_WEB_UI-8080}:${PORT_WEB_UI-8080}'

@@ -1,4 +1,4 @@
-![Build PR](https://github.com/aspecto-io/sns-sqs-big-payload/workflows/Build%20PR/badge.svg?branch=master)
+![Build](https://github.com/aspecto-io/sns-sqs-big-payload/workflows/Build/badge.svg) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com) [![TypeScript](https://badgen.net/npm/types/env-var)](http://www.typescriptlang.org/) [![NPM version](https://img.shields.io/npm/v/sns-sqs-big-payload.svg)](https://www.npmjs.com/package/sns-sqs-big-payload)
 
 # sns-sqs-big-payload
 
@@ -110,6 +110,10 @@ sqsConsumer.stop();
 -   Messages are deleted from the queue once the handler function has completed successfully.
 -   Throwing an error (or returning a rejected promise) from the handler function will cause the message to be left on the queue. An SQS redrive policy can be used to move messages that cannot be processed to a dead letter queue.
 -   By default messages are processed by 10 at a time – a new batch won't be received until the previous one is processed. To adjust number of messages that is being processed in parallel, use the `batchSize` option detailed below.
+
+## Usage in lambda
+
+If you have a lambda function subscribed to sqs queue, you can use SqsConsumer in this case too. [This is a short guide.](./docs/usage-in-lambda.md)
 
 ## Credentials
 
