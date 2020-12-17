@@ -126,6 +126,7 @@ export class SqsConsumer {
                     await new Promise((resolve) => setTimeout(resolve, this.connErrorTimeout));
                 } else {
                     this.events.emit(SqsConsumerEvents.error, err);
+                    throw err;
                 }
             }
             this.events.emit(SqsConsumerEvents.batchProcessed);
