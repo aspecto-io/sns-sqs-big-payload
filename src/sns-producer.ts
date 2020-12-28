@@ -1,6 +1,6 @@
 import * as aws from 'aws-sdk';
 import { v4 as uuid } from 'uuid';
-import { PayloadMeta } from './types';
+import { PayloadMeta, S3PayloadMeta } from './types';
 
 export interface SnsProducerOptions {
     topicArn?: string;
@@ -22,7 +22,7 @@ export interface PublishResult {
 
 // https://aws.amazon.com/sns/pricing/
 // Amazon SNS currently allows a maximum size of 256 KB for published messages.
-const DEFAULT_MAX_SNS_MESSAGE_SIZE = 256 * 1024;
+export const DEFAULT_MAX_SNS_MESSAGE_SIZE = 256 * 1024;
 
 export class SnsProducer {
     private topicArn: string;
@@ -86,19 +86,12 @@ export class SnsProducer {
                 })
                 .promise();
 
-            const snsResponse = await this.sns
-                .publish({
-                    Message: JSON.stringify({
-                        S3Payload: {
-                            Id: payloadId,
-                            Bucket: s3Response.Bucket,
-                            Key: s3Response.Key,
-                            Location: s3Response.Location,
-                        },
-                    } as PayloadMeta),
-                    TopicArn: this.topicArn,
-                })
-                .promise();
+            const snsResponse = await this.publishS3Payload({
+                Id: payloadId,
+                Bucket: s3Response.Bucket,
+                Key: s3Response.Key,
+                Location: s3Response.Location,
+            });
 
             return {
                 s3Response,
@@ -120,5 +113,16 @@ export class SnsProducer {
         return {
             snsResponse,
         };
+    }
+
+    async publishS3Payload(s3PayloadMeta: S3PayloadMeta) {
+        return await this.sns
+            .publish({
+                Message: JSON.stringify({
+                    S3Payload: s3PayloadMeta,
+                } as PayloadMeta),
+                TopicArn: this.topicArn,
+            })
+            .promise();
     }
 }
