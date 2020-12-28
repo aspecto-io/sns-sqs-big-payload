@@ -6,6 +6,7 @@ import {
     SqsConsumerOptions,
     SnsProducerOptions,
     SnsProducer,
+    SqsMessage,
 } from '../src';
 
 import * as aws from 'aws-sdk';
@@ -98,10 +99,10 @@ async function receiveMessages(
     expectedMsgsCount: number,
     options: Partial<SqsConsumerOptions> = {},
     eventHandlers?: Record<string | symbol, (...args) => void>
-): Promise<any> {
+): Promise<SqsMessage[]> {
     const { s3 } = getClients();
     return new Promise((resolve, rej) => {
-        const messages = [];
+        const messages: SqsMessage[] = [];
         let timeoutId;
 
         const sqsConsumer = SqsConsumer.create({
@@ -112,8 +113,8 @@ async function receiveMessages(
             s3,
         });
 
-        sqsConsumer.on(SqsConsumerEvents.messageParsed, ({ payload }) => {
-            messages.push(payload);
+        sqsConsumer.on(SqsConsumerEvents.messageParsed, (message) => {
+            messages.push(message);
         });
 
         sqsConsumer.on(SqsConsumerEvents.messageProcessed, () => {
@@ -173,7 +174,7 @@ describe('sns-sqs-big-payload', () => {
                 const message = { it: 'works' };
                 await sendMessage(message);
                 const [receivedMessage] = await receiveMessages(1);
-                expect(receivedMessage).toEqual(message);
+                expect(receivedMessage.payload).toEqual(message);
             });
         });
 
@@ -193,7 +194,7 @@ describe('sns-sqs-big-payload', () => {
                 const [receivedMessage] = await receiveMessages(1, {}, handlers);
                 // trigger macrotask to call event handlers
                 await new Promise((res) => setTimeout(res));
-                expect(receivedMessage).toEqual(message);
+                expect(receivedMessage.payload).toEqual(message);
 
                 // success
                 expect(handlers[SqsConsumerEvents.started]).toBeCalled();
@@ -211,7 +212,7 @@ describe('sns-sqs-big-payload', () => {
                 expect(handlers[SqsConsumerEvents.connectionError]).not.toBeCalled();
             });
 
-            it('should should trigger processingError event', async () => {
+            it('should trigger processingError event', async () => {
                 const message = { it: 'works' };
                 const handlers = getEventHandlers();
                 await sendMessage(message);
@@ -241,14 +242,16 @@ describe('sns-sqs-big-payload', () => {
                 const message = { it: 'works' };
                 await sendMessage(message, { allPayloadThoughS3: true, s3Bucket: TEST_BUCKET_NAME });
                 const [receivedMessage] = await receiveMessages(1, { getPayloadFromS3: true });
-                expect(receivedMessage).toEqual(message);
+                expect(receivedMessage.payload).toEqual(message);
+                expect(receivedMessage.s3Bucket).toEqual(TEST_BUCKET_NAME);
+                expect(receivedMessage.s3Key).toBeDefined();
             });
 
             it('should send large message through s3', async () => {
                 const message = 'x'.repeat(256 * 1024 + 1);
                 await sendMessage(message, { largePayloadThoughS3: true, s3Bucket: TEST_BUCKET_NAME });
                 const [receivedMessage] = await receiveMessages(1, { getPayloadFromS3: true });
-                expect(receivedMessage).toEqual(message);
+                expect(receivedMessage.payload).toEqual(message);
             });
 
             it('should send messages larger than messageSizeThreshold through s3', async () => {
@@ -261,7 +264,7 @@ describe('sns-sqs-big-payload', () => {
                 });
                 expect(s3Response).toBeDefined();
                 const [receivedMessage] = await receiveMessages(1, { getPayloadFromS3: true });
-                expect(receivedMessage).toEqual(message);
+                expect(receivedMessage.payload).toEqual(message);
             });
 
             it('should send messages smaller than messageSizeThreshold as sqs payload', async () => {
@@ -276,8 +279,11 @@ describe('sns-sqs-big-payload', () => {
                 });
                 expect(s3Response).toBeUndefined();
                 const [receivedMessage] = await receiveMessages(1, { getPayloadFromS3: true });
-                expect(receivedMessage).toEqual(message);
+                expect(receivedMessage.payload).toEqual(message);
+                expect(receivedMessage.s3Bucket).toBeUndefined();
+                expect(receivedMessage.s3Key).toBeUndefined();
             });
+
         });
 
         describe('sending multiple messages', () => {
@@ -288,10 +294,11 @@ describe('sns-sqs-big-payload', () => {
                     sendMessage({ three: 'three' }),
                 ]);
                 const messages = await receiveMessages(3);
+                const messagesPayloads = messages.map(m => m.payload);
                 // order is not guaranteed, so just checking if the message is present
-                expect(messages).toContainEqual({ one: 'one' });
-                expect(messages).toContainEqual({ two: 'two' });
-                expect(messages).toContainEqual({ three: 'three' });
+                expect(messagesPayloads).toContainEqual({ one: 'one' });
+                expect(messagesPayloads).toContainEqual({ two: 'two' });
+                expect(messagesPayloads).toContainEqual({ three: 'three' });
             });
         });
     });
@@ -308,7 +315,7 @@ describe('sns-sqs-big-payload', () => {
                         return snsMessage.Message;
                     },
                 });
-                expect(receivedMessage).toEqual(message);
+                expect(receivedMessage.payload).toEqual(message);
             });
         });
 
@@ -324,7 +331,7 @@ describe('sns-sqs-big-payload', () => {
                         return snsMessage.Message;
                     },
                 });
-                expect(receivedMessage).toEqual(message);
+                expect(receivedMessage.payload).toEqual(message);
             });
         });
     });
