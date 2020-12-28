@@ -1,9 +1,9 @@
 import * as aws from 'aws-sdk';
 import { v4 as uuid } from 'uuid';
-import { PayloadMeta } from './types';
+import { PayloadMeta, S3PayloadMeta } from './types';
 
 // 256KiB
-const DEFAULT_MAX_SQS_MESSAGE_SIZE = 256 * 1024;
+export const DEFAULT_MAX_SQS_MESSAGE_SIZE = 256 * 1024;
 
 export interface SqsProducerOptions {
     queueUrl: string;
@@ -85,22 +85,12 @@ export class SqsProducer {
                 })
                 .promise();
 
-            const sqsResponse = await this.sqs
-                .sendMessage({
-                    QueueUrl: this.queueUrl,
-                    MessageBody: JSON.stringify({
-                        S3Payload: {
-                            Id: payloadId,
-                            Bucket: s3Response.Bucket,
-                            Key: s3Response.Key,
-                            Location: s3Response.Location,
-                        },
-                    } as PayloadMeta),
-                    DelaySeconds: options.DelaySeconds,
-                    MessageDeduplicationId: options.MessageDeduplicationId,
-                    MessageGroupId: options.MessageGroupId,
-                })
-                .promise();
+            const sqsResponse = await this.sendS3Payload({
+                Id: payloadId,
+                Bucket: s3Response.Bucket,
+                Key: s3Response.Key,
+                Location: s3Response.Location,
+            }, options);
 
             return {
                 s3Response,
@@ -123,5 +113,22 @@ export class SqsProducer {
         return {
             sqsResponse,
         };
+    }
+
+    // send a message into the queue with payload which is already in s3.
+    // for example: can be used to resend an unmodified message received via this lib from a queue
+    // into another queue without duplicating the s3 object
+    async sendS3Payload(s3PayloadMeta: S3PayloadMeta, options: SqsMessageOptions = {}) {
+        return await this.sqs
+        .sendMessage({
+            QueueUrl: this.queueUrl,
+            MessageBody: JSON.stringify({
+                S3Payload: s3PayloadMeta,
+            } as PayloadMeta),
+            DelaySeconds: options.DelaySeconds,
+            MessageDeduplicationId: options.MessageDeduplicationId,
+            MessageGroupId: options.MessageGroupId,
+        })
+        .promise();
     }
 }

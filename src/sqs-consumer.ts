@@ -41,8 +41,7 @@ export enum SqsConsumerEvents {
 export interface SqsMessage {
     payload: any;
     message: Message;
-    s3Bucket?: string;
-    s3Key?: string;
+    s3PayloadMeta: S3PayloadMeta;
 }
 
 export class SqsConsumer {
@@ -152,11 +151,11 @@ export class SqsConsumer {
         try {
             this.events.emit(SqsConsumerEvents.messageReceived, message);
             const messageBody = this.transformMessageBody ? this.transformMessageBody(message.Body) : message.Body;
-            const {rawPayload, s3Bucket, s3Key} = await this.getMessagePayload(messageBody);
+            const {rawPayload, s3PayloadMeta} = await this.getMessagePayload(messageBody);
             const payload = this.parseMessagePayload(rawPayload);
-            this.events.emit(SqsConsumerEvents.messageParsed, { message, payload, s3Bucket, s3Key });
+            this.events.emit(SqsConsumerEvents.messageParsed, { message, payload, s3PayloadMeta });
             if (this.handleMessage) {
-                await this.handleMessage({ payload, message, s3Bucket, s3Key });
+                await this.handleMessage({ payload, message, s3PayloadMeta });
             }
             if (deleteAfterProcessing) {
                 await this.deleteMessage(message);
@@ -167,7 +166,7 @@ export class SqsConsumer {
         }
     }
 
-    private async getMessagePayload(messageBody: any): Promise<{rawPayload: any, s3Bucket?: string, s3Key?: string}> {
+    private async getMessagePayload(messageBody: any): Promise<{rawPayload: any, s3PayloadMeta?: S3PayloadMeta}> {
         if (!this.getPayloadFromS3) {
             return { rawPayload: messageBody };
         }
@@ -179,7 +178,7 @@ export class SqsConsumer {
                 const s3Response = await this.s3
                     .getObject({ Bucket: s3PayloadMeta.Bucket, Key: s3PayloadMeta.Key })
                     .promise();
-                return { rawPayload: s3Response.Body, s3Bucket: s3PayloadMeta.Bucket, s3Key: s3PayloadMeta.Key};
+                return { rawPayload: s3Response.Body, s3PayloadMeta};
             } catch (err) {
                 this.events.emit(SqsConsumerEvents.s3PayloadError, { err, message: msgJson });
                 throw err;
