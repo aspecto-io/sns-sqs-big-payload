@@ -3,7 +3,7 @@ import { v4 as uuid } from 'uuid';
 import { PayloadMeta } from './types';
 
 // 256KiB
-const MAX_SQS_MESSAGE_SIZE = 256 * 1024;
+const DEFAULT_MAX_SQS_MESSAGE_SIZE = 256 * 1024;
 
 export interface SqsProducerOptions {
     queueUrl: string;
@@ -15,6 +15,7 @@ export interface SqsProducerOptions {
     s3?: aws.S3;
     sqsEndpointUrl?: string;
     s3EndpointUrl?: string;
+    messageSizeThreshold?: number;
 }
 
 export interface SqsMessageOptions {
@@ -30,6 +31,7 @@ export class SqsProducer {
     private largePayloadThoughS3: boolean;
     private allPayloadThoughS3: boolean;
     private s3Bucket: string;
+    private messageSizeThreshold: number;
 
     constructor(options: SqsProducerOptions) {
         if (options.sqs) {
@@ -60,6 +62,7 @@ export class SqsProducer {
         this.largePayloadThoughS3 = options.largePayloadThoughS3;
         this.allPayloadThoughS3 = options.allPayloadThoughS3;
         this.s3Bucket = options.s3Bucket;
+        this.messageSizeThreshold = options.messageSizeThreshold ?? DEFAULT_MAX_SQS_MESSAGE_SIZE;
     }
 
     static create(options: SqsProducerOptions) {
@@ -70,7 +73,7 @@ export class SqsProducer {
         const messageBody = JSON.stringify(message);
         const msgSize = Buffer.byteLength(messageBody, 'utf-8');
 
-        if ((msgSize > MAX_SQS_MESSAGE_SIZE && this.largePayloadThoughS3) || this.allPayloadThoughS3) {
+        if ((msgSize > this.messageSizeThreshold && this.largePayloadThoughS3) || this.allPayloadThoughS3) {
             const payloadId = uuid();
             const payloadKey = `${payloadId}.json`;
             const s3Response = await this.s3
@@ -103,7 +106,7 @@ export class SqsProducer {
                 s3Response,
                 sqsResponse,
             };
-        } else if (msgSize > MAX_SQS_MESSAGE_SIZE) {
+        } else if (msgSize > this.messageSizeThreshold) {
             throw new Error("Message is too big. Use 'largePayloadThoughS3' option to send large payloads though S3.");
         }
 

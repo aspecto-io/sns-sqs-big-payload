@@ -16,13 +16,13 @@ import * as aws from 'aws-sdk';
 // const TEST_REGION = 'eu-west-1';
 
 // Localstack AWS services
-const TEST_QUEUE_URL = 'http://localhost:4576/queue/test-consumer-producer';
+const TEST_QUEUE_URL = 'http://localhost:4566/queue/test-consumer-producer';
 const TEST_TOPIC_ARN = 'arn:aws:sns:us-east-1:000000000000:test-sns-producer';
 const TEST_REGION = 'us-east-1';
 const TEST_ENDPOINTS = {
-    sqsEndpointUrl: 'http://localhost:4576',
-    snsEndpointUrl: 'http://localhost:4575',
-    s3EndpointUrl: 'http://localhost:4572',
+    sqsEndpointUrl: 'http://localhost:4566',
+    snsEndpointUrl: 'http://localhost:4566',
+    s3EndpointUrl: 'http://localhost:4566',
 };
 const TEST_BUCKET_NAME = 'aspecto-message-payload';
 
@@ -78,7 +78,7 @@ async function sendMessage(msg: any, options: Partial<SqsProducerOptions> = {}) 
         ...options,
         s3,
     });
-    await sqsProducer.sendJSON(msg);
+    return await sqsProducer.sendJSON(msg);
 }
 
 async function publishMessage(msg: any, options: Partial<SnsProducerOptions> = {}) {
@@ -171,7 +171,7 @@ describe('sns-sqs-big-payload', () => {
         describe('sending simple messages', () => {
             it('should send and receive the message', async () => {
                 const message = { it: 'works' };
-                sendMessage(message);
+                await sendMessage(message);
                 const [receivedMessage] = await receiveMessages(1);
                 expect(receivedMessage).toEqual(message);
             });
@@ -189,7 +189,7 @@ describe('sns-sqs-big-payload', () => {
             it('should trigger success events event', async () => {
                 const message = { it: 'works' };
                 const handlers = getEventHandlers();
-                sendMessage(message);
+                await sendMessage(message);
                 const [receivedMessage] = await receiveMessages(1, {}, handlers);
                 // trigger macrotask to call event handlers
                 await new Promise((res) => setTimeout(res));
@@ -214,7 +214,7 @@ describe('sns-sqs-big-payload', () => {
             it('should should trigger processingError event', async () => {
                 const message = { it: 'works' };
                 const handlers = getEventHandlers();
-                sendMessage(message);
+                await sendMessage(message);
                 await receiveMessages(
                     1,
                     {
@@ -239,7 +239,42 @@ describe('sns-sqs-big-payload', () => {
         describe('sending message through s3', () => {
             it('should send all message though s3 if configured', async () => {
                 const message = { it: 'works' };
-                sendMessage(message, { allPayloadThoughS3: true, s3Bucket: TEST_BUCKET_NAME });
+                await sendMessage(message, { allPayloadThoughS3: true, s3Bucket: TEST_BUCKET_NAME });
+                const [receivedMessage] = await receiveMessages(1, { getPayloadFromS3: true });
+                expect(receivedMessage).toEqual(message);
+            });
+
+            it('should send large message through s3', async () => {
+                const message = 'x'.repeat(256 * 1024 + 1);
+                await sendMessage(message, { largePayloadThoughS3: true, s3Bucket: TEST_BUCKET_NAME });
+                const [receivedMessage] = await receiveMessages(1, { getPayloadFromS3: true });
+                expect(receivedMessage).toEqual(message);
+            });
+
+            it('should send messages larger than messageSizeThreshold through s3', async () => {
+                const messageSizeThreshold = 1024;
+                const message = 'x'.repeat(messageSizeThreshold + 1);
+                const { s3Response } = await sendMessage(message, {
+                    largePayloadThoughS3: true,
+                    s3Bucket: TEST_BUCKET_NAME,
+                    messageSizeThreshold,
+                });
+                expect(s3Response).toBeDefined();
+                const [receivedMessage] = await receiveMessages(1, { getPayloadFromS3: true });
+                expect(receivedMessage).toEqual(message);
+            });
+
+            it('should send messages smaller than messageSizeThreshold as sqs payload', async () => {
+                const messageSizeThreshold = 1024;
+                // payload is calculated based on the stringify representation of the message,
+                // which includes the '"' chars
+                const message = 'x'.repeat(messageSizeThreshold - 3);
+                const { s3Response } = await sendMessage(message, {
+                    largePayloadThoughS3: true,
+                    s3Bucket: TEST_BUCKET_NAME,
+                    messageSizeThreshold,
+                });
+                expect(s3Response).toBeUndefined();
                 const [receivedMessage] = await receiveMessages(1, { getPayloadFromS3: true });
                 expect(receivedMessage).toEqual(message);
             });
@@ -247,9 +282,11 @@ describe('sns-sqs-big-payload', () => {
 
         describe('sending multiple messages', () => {
             it('should receive all the messages that have been sent', async () => {
-                sendMessage({ one: 'one' });
-                sendMessage({ two: 'two' });
-                sendMessage({ three: 'three' });
+                await Promise.all([
+                    sendMessage({ one: 'one' }),
+                    sendMessage({ two: 'two' }),
+                    sendMessage({ three: 'three' }),
+                ]);
                 const messages = await receiveMessages(3);
                 // order is not guaranteed, so just checking if the message is present
                 expect(messages).toContainEqual({ one: 'one' });
