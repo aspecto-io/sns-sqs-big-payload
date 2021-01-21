@@ -1,6 +1,7 @@
 import * as aws from 'aws-sdk';
+import { PromiseResult } from 'aws-sdk/lib/request';
 import { v4 as uuid } from 'uuid';
-import { PayloadMeta, S3PayloadMeta } from './types';
+import { S3PayloadMeta } from './types';
 import {
     buildS3PayloadWithExtendedCompatibility,
     buildS3Payload,
@@ -75,11 +76,11 @@ export class SqsProducer {
         this.extendedLibraryCompatibility = options.extendedLibraryCompatibility;
     }
 
-    static create(options: SqsProducerOptions) {
+    static create(options: SqsProducerOptions): SqsProducer {
         return new SqsProducer(options);
     }
 
-    async sendJSON(message: object, options: SqsMessageOptions = {}): Promise<any> {
+    async sendJSON(message: unknown, options: SqsMessageOptions = {}): Promise<any> {
         const messageBody = JSON.stringify(message);
         const msgSize = Buffer.byteLength(messageBody, 'utf-8');
 
@@ -132,7 +133,11 @@ export class SqsProducer {
     // send a message into the queue with payload which is already in s3.
     // for example: can be used to resend an unmodified message received via this lib from a queue
     // into another queue without duplicating the s3 object
-    async sendS3Payload(s3PayloadMeta: S3PayloadMeta, msgSize: number, options: SqsMessageOptions = {}) {
+    async sendS3Payload(
+        s3PayloadMeta: S3PayloadMeta,
+        msgSize: number,
+        options: SqsMessageOptions = {}
+    ): Promise<PromiseResult<aws.SQS.SendMessageResult, aws.AWSError>> {
         const messageAttributes = this.extendedLibraryCompatibility
             ? createExtendedCompatibilityAttributeMap(msgSize)
             : {};

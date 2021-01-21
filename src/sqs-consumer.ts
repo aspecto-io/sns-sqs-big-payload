@@ -93,7 +93,7 @@ export class SqsConsumer {
         this.extendedLibraryCompatibility = options.extendedLibraryCompatibility;
     }
 
-    static create(options: SqsConsumerOptions) {
+    static create(options: SqsConsumerOptions): SqsConsumer {
         return new SqsConsumer(options);
     }
 
@@ -113,7 +113,7 @@ export class SqsConsumer {
         this.events.on(event, handler);
     }
 
-    async processMessage(message: Message, options: ProcessingOptions) {
+    async processMessage(message: Message, options: ProcessingOptions): Promise<void> {
         await this.processMsg(message, options);
     }
 
@@ -141,7 +141,7 @@ export class SqsConsumer {
         this.events.emit(SqsConsumerEvents.pollEnded);
     }
 
-    private isConnError(err: AWSError): Boolean {
+    private isConnError(err: AWSError): boolean {
         return err.statusCode === 403 || err.code === 'CredentialsError' || err.code === 'UnknownEndpoint';
     }
 
@@ -160,7 +160,11 @@ export class SqsConsumer {
             const messageBody = this.transformMessageBody ? this.transformMessageBody(message.Body) : message.Body;
             const { rawPayload, s3PayloadMeta } = await this.getMessagePayload(messageBody, message.MessageAttributes);
             const payload = this.parseMessagePayload(rawPayload);
-            this.events.emit(SqsConsumerEvents.messageParsed, { message, payload, s3PayloadMeta });
+            this.events.emit(SqsConsumerEvents.messageParsed, {
+                message,
+                payload,
+                s3PayloadMeta,
+            });
             if (this.handleMessage) {
                 await this.handleMessage({ payload, message, s3PayloadMeta });
             }
@@ -180,7 +184,7 @@ export class SqsConsumer {
         if (!this.getPayloadFromS3) {
             return { rawPayload: messageBody };
         }
-        var s3PayloadMeta: S3PayloadMeta;
+        let s3PayloadMeta: S3PayloadMeta;
         const s3Object: SqsExtendedPayloadMeta | PayloadMeta = JSON.parse(messageBody);
         if (this.extendedLibraryCompatibility && attributes && attributes[SQS_LARGE_PAYLOAD_SIZE_ATTRIBUTE]) {
             const msgJson = s3Object as SqsExtendedPayloadMeta;
@@ -201,7 +205,10 @@ export class SqsConsumer {
                     .promise();
                 return { rawPayload: s3Response.Body, s3PayloadMeta };
             } catch (err) {
-                this.events.emit(SqsConsumerEvents.s3PayloadError, { err, message: s3Object });
+                this.events.emit(SqsConsumerEvents.s3PayloadError, {
+                    err,
+                    message: s3Object,
+                });
                 throw err;
             }
         }

@@ -1,6 +1,7 @@
 import * as aws from 'aws-sdk';
+import { PromiseResult } from 'aws-sdk/lib/request';
 import { v4 as uuid } from 'uuid';
-import { PayloadMeta, S3PayloadMeta } from './types';
+import { S3PayloadMeta } from './types';
 import {
     buildS3PayloadWithExtendedCompatibility,
     buildS3Payload,
@@ -76,11 +77,11 @@ export class SnsProducer {
         this.extendedLibraryCompatibility = options.extendedLibraryCompatibility;
     }
 
-    public static create(options: SnsProducerOptions) {
+    public static create(options: SnsProducerOptions): SnsProducer {
         return new SnsProducer(options);
     }
 
-    async publishJSON(message: object): Promise<PublishResult> {
+    async publishJSON(message: unknown): Promise<PublishResult> {
         const messageBody = JSON.stringify(message);
         const msgSize = Buffer.byteLength(messageBody, 'utf-8');
 
@@ -128,7 +129,10 @@ export class SnsProducer {
         };
     }
 
-    async publishS3Payload(s3PayloadMeta: S3PayloadMeta, msgSize: number) {
+    async publishS3Payload(
+        s3PayloadMeta: S3PayloadMeta,
+        msgSize: number
+    ): Promise<PromiseResult<aws.SNS.PublishResponse, aws.AWSError>> {
         const messageAttributes = this.extendedLibraryCompatibility
             ? createExtendedCompatibilityAttributeMap(msgSize)
             : {};
