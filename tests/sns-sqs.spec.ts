@@ -57,7 +57,7 @@ async function initAws() {
         await sqs.createQueue({ QueueName: QUEUE_2_NAME }).promise(),
     ]);
     testQueueUrl = res[1].QueueUrl;
-    testQueue2Url= res[2].QueueUrl;
+    testQueue2Url = res[2].QueueUrl;
     await sns
         .subscribe({
             Protocol: 'sqs',
@@ -86,7 +86,7 @@ const getSqsProducer = (options: Partial<SqsProducerOptions> = {}) => {
         ...options,
         s3,
     });
-}
+};
 
 async function sendMessage(msg: any, options: Partial<SqsProducerOptions>) {
     const sqsProducer = getSqsProducer(options);
@@ -108,7 +108,7 @@ const getSnsProducer = (options: Partial<SnsProducerOptions> = {}) => {
         ...options,
         s3,
     });
-}
+};
 
 async function publishMessage(msg: any, options: Partial<SnsProducerOptions>) {
     const snsProducer = getSnsProducer(options);
@@ -292,6 +292,41 @@ describe('sns-sqs-big-payload', () => {
                 expect(receivedMessage.payload).toEqual(message);
             });
 
+            it('should send messages through s3 with extended compatibility mode', async () => {
+                const messageSizeThreshold = 512;
+                const message = 'x'.repeat(messageSizeThreshold + 1);
+                const { s3Response } = await sendMessage(message, {
+                    largePayloadThoughS3: true,
+                    s3Bucket: TEST_BUCKET_NAME,
+                    messageSizeThreshold,
+                    extendedLibraryCompatibility: true,
+                });
+                expect(s3Response).toBeDefined();
+                const [receivedMessage] = await receiveMessages(1, {
+                    getPayloadFromS3: true,
+                    extendedLibraryCompatibility: true,
+                });
+                expect(receivedMessage.payload).toEqual(message);
+            });
+
+            it('should not send messages smaller than messageSizeThreshold through s3 with extended compatibility mode', async () => {
+                const messageSizeThreshold = 512;
+                const message = 'x'.repeat(messageSizeThreshold - 5);
+                const { s3Response } = await sendMessage(message, {
+                    largePayloadThoughS3: true,
+                    s3Bucket: TEST_BUCKET_NAME,
+                    messageSizeThreshold,
+                    extendedLibraryCompatibility: true,
+                });
+                expect(s3Response).toBeUndefined();
+                const [receivedMessage] = await receiveMessages(1, {
+                    getPayloadFromS3: true,
+                    extendedLibraryCompatibility: true,
+                });
+                expect(receivedMessage.payload).toEqual(message);
+                expect(receivedMessage.s3PayloadMeta).toBeUndefined();
+            });
+
             it('should send messages smaller than messageSizeThreshold as sqs payload', async () => {
                 const messageSizeThreshold = 1024;
                 // payload is calculated based on the stringify representation of the message,
@@ -312,12 +347,14 @@ describe('sns-sqs-big-payload', () => {
                 const message = { it: 'works' };
                 await sendMessage(message, { allPayloadThoughS3: true, s3Bucket: TEST_BUCKET_NAME });
                 const [receivedMessage] = await receiveMessages(1, { getPayloadFromS3: true });
-                await sendS3Payload(receivedMessage.s3PayloadMeta, {queueUrl: testQueue2Url});
-                const [reReceivedMessage] = await receiveMessages(1, { getPayloadFromS3: true, queueUrl: testQueue2Url });
+                await sendS3Payload(receivedMessage.s3PayloadMeta, { queueUrl: testQueue2Url });
+                const [reReceivedMessage] = await receiveMessages(1, {
+                    getPayloadFromS3: true,
+                    queueUrl: testQueue2Url,
+                });
                 expect(reReceivedMessage.payload).toEqual(message);
                 expect(reReceivedMessage.s3PayloadMeta).toEqual(receivedMessage.s3PayloadMeta);
             });
-
         });
 
         describe('sending multiple messages', () => {
@@ -328,7 +365,7 @@ describe('sns-sqs-big-payload', () => {
                     sendMessage({ three: 'three' }),
                 ]);
                 const messages = await receiveMessages(3);
-                const messagesPayloads = messages.map(m => m.payload);
+                const messagesPayloads = messages.map((m) => m.payload);
                 // order is not guaranteed, so just checking if the message is present
                 expect(messagesPayloads).toContainEqual({ one: 'one' });
                 expect(messagesPayloads).toContainEqual({ two: 'two' });
@@ -354,7 +391,6 @@ describe('sns-sqs-big-payload', () => {
         });
 
         describe('publishing message through s3', () => {
-
             it('should send payload though s3 if configured - for all messages', async () => {
                 const message = { it: 'works' };
                 await publishMessage(message, { allPayloadThoughS3: true, s3Bucket: TEST_BUCKET_NAME });
@@ -370,10 +406,14 @@ describe('sns-sqs-big-payload', () => {
             });
 
             it('publish to sns with payload already in s3', async () => {
-                // publish message to queue 2, read it with s3 metadata, 
+                // publish message to queue 2, read it with s3 metadata,
                 // then send it to sns with s3 payload and read it from queue 1
                 const message = { it: 'works' };
-                await sendMessage(message, { allPayloadThoughS3: true, s3Bucket: TEST_BUCKET_NAME, queueUrl: testQueue2Url });
+                await sendMessage(message, {
+                    allPayloadThoughS3: true,
+                    s3Bucket: TEST_BUCKET_NAME,
+                    queueUrl: testQueue2Url,
+                });
                 const [receivedMessage] = await receiveMessages(1, { getPayloadFromS3: true, queueUrl: testQueue2Url });
 
                 await publishS3Payload(receivedMessage.s3PayloadMeta);

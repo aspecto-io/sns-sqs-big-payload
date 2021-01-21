@@ -1,8 +1,9 @@
 import * as aws from 'aws-sdk';
 import { EventEmitter } from 'events';
-import { Message, ReceiveMessageRequest, ReceiveMessageResult } from 'aws-sdk/clients/sqs';
+import { Message, MessageBodyAttributeMap, ReceiveMessageRequest, ReceiveMessageResult } from 'aws-sdk/clients/sqs';
 import { AWSError } from 'aws-sdk';
-import { PayloadMeta, S3PayloadMeta } from './types';
+import { PayloadMeta, S3PayloadMeta, SqsExtendedPayloadMeta } from './types';
+import { SQS_LARGE_PAYLOAD_SIZE_ATTRIBUTE } from './util';
 
 export interface SqsConsumerOptions {
     queueUrl: string;
@@ -17,6 +18,9 @@ export interface SqsConsumerOptions {
     handleMessage?(message: SqsMessage): Promise<void>;
     parsePayload?(payload: any): any;
     transformMessageBody?(messageBody: any): any;
+    // Opt-in to enable compatibility with
+    // Amazon SQS Extended Client Java Library (and other compatible libraries)
+    extendedLibraryCompatibility: boolean;
 }
 
 export interface ProcessingOptions {
@@ -57,6 +61,7 @@ export class SqsConsumer {
     private handleMessage?: (message: SqsMessage) => Promise<void>;
     private parsePayload?: (payload: any) => any;
     private transformMessageBody?: (messageBody: any) => any;
+    private extendedLibraryCompatibility: boolean;
 
     constructor(options: SqsConsumerOptions) {
         if (options.sqs) {
@@ -85,6 +90,7 @@ export class SqsConsumer {
         this.handleMessage = options.handleMessage;
         this.parsePayload = options.parsePayload;
         this.transformMessageBody = options.transformMessageBody;
+        this.extendedLibraryCompatibility = options.extendedLibraryCompatibility;
     }
 
     static create(options: SqsConsumerOptions) {
@@ -118,6 +124,7 @@ export class SqsConsumer {
                     QueueUrl: this.queueUrl,
                     MaxNumberOfMessages: this.batchSize,
                     WaitTimeSeconds: this.waitTimeSeconds,
+                    MessageAttributeNames: [SQS_LARGE_PAYLOAD_SIZE_ATTRIBUTE],
                 });
                 if (!this.started) return;
                 await this.handleSqsResponse(response);
@@ -151,7 +158,7 @@ export class SqsConsumer {
         try {
             this.events.emit(SqsConsumerEvents.messageReceived, message);
             const messageBody = this.transformMessageBody ? this.transformMessageBody(message.Body) : message.Body;
-            const {rawPayload, s3PayloadMeta} = await this.getMessagePayload(messageBody);
+            const { rawPayload, s3PayloadMeta } = await this.getMessagePayload(messageBody, message.MessageAttributes);
             const payload = this.parseMessagePayload(rawPayload);
             this.events.emit(SqsConsumerEvents.messageParsed, { message, payload, s3PayloadMeta });
             if (this.handleMessage) {
@@ -166,21 +173,35 @@ export class SqsConsumer {
         }
     }
 
-    private async getMessagePayload(messageBody: any): Promise<{rawPayload: any, s3PayloadMeta?: S3PayloadMeta}> {
+    private async getMessagePayload(
+        messageBody: any,
+        attributes: MessageBodyAttributeMap
+    ): Promise<{ rawPayload: any; s3PayloadMeta?: S3PayloadMeta }> {
         if (!this.getPayloadFromS3) {
             return { rawPayload: messageBody };
         }
-
-        const msgJson: PayloadMeta = JSON.parse(messageBody);
-        const s3PayloadMeta: S3PayloadMeta = msgJson?.S3Payload;
+        var s3PayloadMeta: S3PayloadMeta;
+        const s3Object: SqsExtendedPayloadMeta | PayloadMeta = JSON.parse(messageBody);
+        if (this.extendedLibraryCompatibility && attributes && attributes[SQS_LARGE_PAYLOAD_SIZE_ATTRIBUTE]) {
+            const msgJson = s3Object as SqsExtendedPayloadMeta;
+            s3PayloadMeta = {
+                Bucket: msgJson.s3BucketName,
+                Key: msgJson.s3Key,
+                Id: 'not available in extended compatibility mode',
+                Location: 'not available in extended compatibility mode',
+            };
+        } else {
+            const msgJson = s3Object as PayloadMeta;
+            s3PayloadMeta = msgJson?.S3Payload;
+        }
         if (s3PayloadMeta) {
             try {
                 const s3Response = await this.s3
                     .getObject({ Bucket: s3PayloadMeta.Bucket, Key: s3PayloadMeta.Key })
                     .promise();
-                return { rawPayload: s3Response.Body, s3PayloadMeta};
+                return { rawPayload: s3Response.Body, s3PayloadMeta };
             } catch (err) {
-                this.events.emit(SqsConsumerEvents.s3PayloadError, { err, message: msgJson });
+                this.events.emit(SqsConsumerEvents.s3PayloadError, { err, message: s3Object });
                 throw err;
             }
         }
