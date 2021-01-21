@@ -21,7 +21,7 @@ export interface SnsProducerOptions {
     messageSizeThreshold?: number;
     // Opt-in to enable compatibility with
     // Amazon SQS Extended Client Java Library (and other compatible libraries)
-    extendedLibraryCompatibility: boolean;
+    extendedLibraryCompatibility?: boolean;
 }
 
 export interface PublishResult {
