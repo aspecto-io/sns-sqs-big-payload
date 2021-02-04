@@ -72,7 +72,7 @@ export class SqsConsumer {
                 endpoint: options.sqsEndpointUrl,
             });
         }
-        if (options.getPayloadFromS3 || options.getPayloadFromS3) {
+        if (options.getPayloadFromS3) {
             if (options.s3) {
                 this.s3 = options.s3;
             } else {
