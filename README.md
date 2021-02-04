@@ -43,6 +43,10 @@ const snsProducer = SnsProducer.create({
     region: 'us-east-1',
     // to enable sending large payloads (>256KiB) though S3
     largePayloadThoughS3: true,
+    // Opt-in to enable compatibility with
+    // Amazon SQS Extended Client Java Library (and other compatible libraries).
+    // see https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-s3-messages.html
+    extendedLibraryCompatibility: boolean;
     s3EndpointUrl: '...',
 });
 
@@ -61,6 +65,10 @@ const sqsProducer = SqsProducer.create({
     region: 'us-east-1',
     // to enable sending large payloads (>256KiB) though S3
     largePayloadThoughS3: true,
+    // Opt-in to enable compatibility with
+    // Amazon SQS Extended Client Java Library (and other compatible libraries).
+    // see https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-s3-messages.html
+    extendedLibraryCompatibility: boolean;
     s3Bucket: '...',
 });
 
