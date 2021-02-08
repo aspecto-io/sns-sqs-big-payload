@@ -43,6 +43,10 @@ const snsProducer = SnsProducer.create({
     region: 'us-east-1',
     // to enable sending large payloads (>256KiB) though S3
     largePayloadThoughS3: true,
+    // Opt-in to enable compatibility with
+    // Amazon SQS Extended Client Java Library (and other compatible libraries).
+    // see https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-s3-messages.html
+    extendedLibraryCompatibility: boolean;
     s3EndpointUrl: '...',
 });
 
@@ -61,6 +65,10 @@ const sqsProducer = SqsProducer.create({
     region: 'us-east-1',
     // to enable sending large payloads (>256KiB) though S3
     largePayloadThoughS3: true,
+    // Opt-in to enable compatibility with
+    // Amazon SQS Extended Client Java Library (and other compatible libraries).
+    // see https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-s3-messages.html
+    extendedLibraryCompatibility: boolean;
     s3Bucket: '...',
 });
 
@@ -93,6 +101,10 @@ const sqsConsumer = SqsConsumer.create({
     handleMessage: async ({ payload }) => {
         // ...
     },
+    // Opt-in to enable compatibility with
+    // Amazon SQS Extended Client Java Library (and other compatible libraries).
+    // see https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-s3-messages.html
+    extendedLibraryCompatibility: boolean;
 });
 
 // to subscribe for events
@@ -114,6 +126,16 @@ sqsConsumer.stop();
 ## Usage in lambda
 
 If you have a lambda function subscribed to sqs queue, you can use SqsConsumer in this case too. [This is a short guide.](./docs/usage-in-lambda.md)
+
+## Compatibility with libraries in other languages
+
+If you turn on `extendedLibraryCompatibility`, then the library will be compatible with:
+
+-   Amazon SQS Extended Client Library for Java (https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-s3-messages.html)
+-   Boto3 Sqs Extended Client Lib for python (https://github.com/timothymugayi/boto3-sqs-extended-client-lib)
+-   other libraries that are compatible to the above
+
+Please be careful: This mode is not compatible with the standard mode due to differences in s3 payload.
 
 ## Credentials
 

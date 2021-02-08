@@ -1,6 +1,12 @@
 import * as aws from 'aws-sdk';
+import { PromiseResult } from 'aws-sdk/lib/request';
 import { v4 as uuid } from 'uuid';
-import { PayloadMeta, S3PayloadMeta } from './types';
+import { S3PayloadMeta } from './types';
+import {
+    buildS3PayloadWithExtendedCompatibility,
+    buildS3Payload,
+    createExtendedCompatibilityAttributeMap,
+} from './util';
 
 export interface SnsProducerOptions {
     topicArn?: string;
@@ -13,6 +19,9 @@ export interface SnsProducerOptions {
     snsEndpointUrl?: string;
     s3EndpointUrl?: string;
     messageSizeThreshold?: number;
+    // Opt-in to enable compatibility with
+    // Amazon SQS Extended Client Java Library (and other compatible libraries)
+    extendedLibraryCompatibility?: boolean;
 }
 
 export interface PublishResult {
@@ -32,6 +41,7 @@ export class SnsProducer {
     private allPayloadThoughS3: boolean;
     private s3Bucket: string;
     private messageSizeThreshold: number;
+    private extendedLibraryCompatibility: boolean;
 
     constructor(options: SnsProducerOptions) {
         if (options.sns) {
@@ -64,13 +74,14 @@ export class SnsProducer {
         this.allPayloadThoughS3 = options.allPayloadThoughS3;
         this.s3Bucket = options.s3Bucket;
         this.messageSizeThreshold = options.messageSizeThreshold ?? DEFAULT_MAX_SNS_MESSAGE_SIZE;
+        this.extendedLibraryCompatibility = options.extendedLibraryCompatibility;
     }
 
-    public static create(options: SnsProducerOptions) {
+    public static create(options: SnsProducerOptions): SnsProducer {
         return new SnsProducer(options);
     }
 
-    async publishJSON(message: object): Promise<PublishResult> {
+    async publishJSON(message: unknown): Promise<PublishResult> {
         const messageBody = JSON.stringify(message);
         const msgSize = Buffer.byteLength(messageBody, 'utf-8');
 
@@ -86,12 +97,15 @@ export class SnsProducer {
                 })
                 .promise();
 
-            const snsResponse = await this.publishS3Payload({
-                Id: payloadId,
-                Bucket: s3Response.Bucket,
-                Key: s3Response.Key,
-                Location: s3Response.Location,
-            });
+            const snsResponse = await this.publishS3Payload(
+                {
+                    Id: payloadId,
+                    Bucket: s3Response.Bucket,
+                    Key: s3Response.Key,
+                    Location: s3Response.Location,
+                },
+                msgSize
+            );
 
             return {
                 s3Response,
@@ -115,13 +129,20 @@ export class SnsProducer {
         };
     }
 
-    async publishS3Payload(s3PayloadMeta: S3PayloadMeta) {
+    async publishS3Payload(
+        s3PayloadMeta: S3PayloadMeta,
+        msgSize: number
+    ): Promise<PromiseResult<aws.SNS.PublishResponse, aws.AWSError>> {
+        const messageAttributes = this.extendedLibraryCompatibility
+            ? createExtendedCompatibilityAttributeMap(msgSize)
+            : {};
         return await this.sns
             .publish({
-                Message: JSON.stringify({
-                    S3Payload: s3PayloadMeta,
-                } as PayloadMeta),
+                Message: this.extendedLibraryCompatibility
+                    ? buildS3PayloadWithExtendedCompatibility(s3PayloadMeta)
+                    : buildS3Payload(s3PayloadMeta),
                 TopicArn: this.topicArn,
+                MessageAttributes: messageAttributes,
             })
             .promise();
     }

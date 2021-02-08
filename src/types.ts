@@ -8,3 +8,8 @@ export interface S3PayloadMeta {
     Key: string;
     Location: string;
 }
+
+export interface SqsExtendedPayloadMeta {
+    s3BucketName: string;
+    s3Key: string;
+}
