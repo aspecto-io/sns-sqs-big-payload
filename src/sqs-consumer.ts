@@ -16,7 +16,7 @@ export interface SqsConsumerOptions {
     sqsEndpointUrl?: string;
     s3EndpointUrl?: string;
     handleMessage?(message: SqsMessage): Promise<void>;
-    handleBatch?(messages: SqsMessage[]): Promise<Message[]>;
+    handleBatch?(messages: SqsMessage[]): Promise<Message[]|void>;
     parsePayload?(payload: any): any;
     transformMessageBody?(messageBody: any): any;
     // Opt-in to enable compatibility with
@@ -174,6 +174,9 @@ export class SqsConsumer {
             const messagesToDelete = await this.handleBatch(messagesWithPayload);
             if (messagesToDelete && messagesToDelete.length) 
                 await this.deleteBatch(messagesToDelete);
+            else if (messagesToDelete === undefined) {
+                await this.deleteBatch(messages);
+            }
 
         } catch (err) {
             this.events.emit(SqsConsumerEvents.processingError, { err, messages });
