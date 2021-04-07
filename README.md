@@ -13,7 +13,7 @@ SQS/SNS producer/consumer library. Provides an ability to pass payloads though s
 -   Get the corresponding message object from an Amazon S3 bucket.
 -   Handle the interface for large messages between SNS to SQS via S3 bucket in the middle
 
-## Instalation
+## Installation
 
 ```
 npm install sns-sqs-big-payload
@@ -21,7 +21,7 @@ npm install sns-sqs-big-payload
 
 Important:
 
-> Make sure you also have `aws-sdk` installed, bacause it's listed as a peer dependency, so won't be installed automatically.
+> Make sure you also have `aws-sdk` installed, because it's listed as a peer dependency, so won't be installed automatically.
 
 ## Usage
 
@@ -190,10 +190,10 @@ It sends the following events:
 | poll-ended          | None             | Fires after the polling cycle is ended. Useful for graceful shutdown.               |
 | stopped             | None             | Fires when the polling stops                                                        |
 | error               | `{err, message}` | Fires in case of processing error                                                   |
-| s3-payload-error    | `{err, message}` | Fires when an error ocurrs during downloading payload from s3                       |
-| processing-error    | `{err, message}` | Fires when an error ocurrs during processing (only inside `handleMessage` function) |
-| connection-error    | `err`            | Fires when a connection error ocurrs during polling (retriable)                     |
-| payload-parse-error | `err`            | Fires when a connection error ocurrs during parsing                                 |
+| s3-payload-error    | `{err, message}` | Fires when an error occurs during downloading payload from s3                       |
+| processing-error    | `{err, message}` | Fires when an error occurs during processing (only inside `handleMessage` function) |
+| connection-error    | `err`            | Fires when a connection error occurs during polling (retriable)                     |
+| payload-parse-error | `err`            | Fires when a connection error occurs during parsing                                 |
 
 You can also use this enum if you're using TypeScript
 

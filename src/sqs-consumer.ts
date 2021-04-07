@@ -16,6 +16,7 @@ export interface SqsConsumerOptions {
     sqsEndpointUrl?: string;
     s3EndpointUrl?: string;
     handleMessage?(message: SqsMessage): Promise<void>;
+    handleBatch?(messages: SqsMessage[]): Promise<Message[]|undefined>;
     parsePayload?(payload: any): any;
     transformMessageBody?(messageBody: any): any;
     // Opt-in to enable compatibility with
@@ -59,6 +60,7 @@ export class SqsConsumer {
     private events = new EventEmitter();
     private connErrorTimeout = 10000;
     private handleMessage?: (message: SqsMessage) => Promise<void>;
+    private handleBatch?: (messagesWithPayload: SqsMessage[]) => Promise<Message[]|undefined>;
     private parsePayload?: (payload: any) => any;
     private transformMessageBody?: (messageBody: any) => any;
     private extendedLibraryCompatibility: boolean;
@@ -88,6 +90,7 @@ export class SqsConsumer {
         this.batchSize = options.batchSize || 10;
         this.waitTimeSeconds = options.waitTimeSeconds || 20;
         this.handleMessage = options.handleMessage;
+        this.handleBatch = options.handleBatch;
         this.parsePayload = options.parsePayload;
         this.transformMessageBody = options.transformMessageBody;
         this.extendedLibraryCompatibility = options.extendedLibraryCompatibility;
@@ -147,7 +150,46 @@ export class SqsConsumer {
 
     private async handleSqsResponse(result: ReceiveMessageResult): Promise<void> {
         if (result && result.Messages) {
-            await Promise.all(result.Messages.map((message) => this.processMsg(message)));
+            if (this.handleBatch) {
+                await this.processBatch(result.Messages);
+            } else {
+                await Promise.all(result.Messages.map((message) => this.processMsg(message)));
+            }
+        }
+    }
+
+    private async processBatch(messages: Message[]) {
+        try {
+            const messagesWithPayload = await Promise.all(messages.map(async message => {
+                const { payload, s3PayloadMeta } = await this.preparePayload(message);
+                const messageWithPayload = {
+                    message,
+                    payload,
+                    s3PayloadMeta,
+                };
+
+                return messageWithPayload;
+            }));
+
+            const messagesToDelete = await this.handleBatch(messagesWithPayload);
+            if (messagesToDelete?.length) 
+                await this.deleteBatch(messagesToDelete);
+            else if (messagesToDelete === undefined)
+                await this.deleteBatch(messages);
+
+        } catch (err) {
+            this.events.emit(SqsConsumerEvents.processingError, { err, messages });
+        }
+    }
+
+    private async preparePayload(message: Message) {
+        const messageBody = this.transformMessageBody ? this.transformMessageBody(message.Body) : message.Body;
+        const { rawPayload, s3PayloadMeta } = await this.getMessagePayload(messageBody, message.MessageAttributes);
+        const payload = this.parseMessagePayload(rawPayload);
+
+        return {
+            payload,
+            s3PayloadMeta,
         }
     }
 
@@ -157,9 +199,7 @@ export class SqsConsumer {
     ): Promise<void> {
         try {
             this.events.emit(SqsConsumerEvents.messageReceived, message);
-            const messageBody = this.transformMessageBody ? this.transformMessageBody(message.Body) : message.Body;
-            const { rawPayload, s3PayloadMeta } = await this.getMessagePayload(messageBody, message.MessageAttributes);
-            const payload = this.parseMessagePayload(rawPayload);
+            const { payload, s3PayloadMeta } = await this.preparePayload(message);
             this.events.emit(SqsConsumerEvents.messageParsed, {
                 message,
                 payload,
@@ -239,6 +279,18 @@ export class SqsConsumer {
             .deleteMessage({
                 QueueUrl: this.queueUrl,
                 ReceiptHandle: message.ReceiptHandle,
+            })
+            .promise();
+    }
+
+    private async deleteBatch(messages: Message[]): Promise<void> {
+        await this.sqs
+            .deleteMessageBatch({
+                QueueUrl: this.queueUrl,
+                Entries: messages.map((message, index) => ({
+                    Id: index.toString(),
+                    ReceiptHandle: message.ReceiptHandle,
+                })),
             })
             .promise();
     }
