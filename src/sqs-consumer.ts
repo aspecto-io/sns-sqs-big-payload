@@ -172,7 +172,7 @@ export class SqsConsumer {
             }));
 
             const messagesToDelete = await this.handleBatch(messagesWithPayload);
-            if (messagesToDelete && messagesToDelete.length) 
+            if (messagesToDelete?.length) 
                 await this.deleteBatch(messagesToDelete);
             else if (messagesToDelete === undefined) {
                 await this.deleteBatch(messages);
