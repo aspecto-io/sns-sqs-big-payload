@@ -16,7 +16,7 @@ export interface SqsConsumerOptions {
     sqsEndpointUrl?: string;
     s3EndpointUrl?: string;
     handleMessage?(message: SqsMessage): Promise<void>;
-    handleBatch?(messages: SqsMessage[]): Promise<Message[]|void>;
+    handleBatch?(messages: SqsMessage[]): Promise<Message[]|undefined>;
     parsePayload?(payload: any): any;
     transformMessageBody?(messageBody: any): any;
     // Opt-in to enable compatibility with
@@ -60,7 +60,7 @@ export class SqsConsumer {
     private events = new EventEmitter();
     private connErrorTimeout = 10000;
     private handleMessage?: (message: SqsMessage) => Promise<void>;
-    private handleBatch?: (messagesWithPayload: SqsMessage[]) => Promise<Message[]>;
+    private handleBatch?: (messagesWithPayload: SqsMessage[]) => Promise<Message[]|undefined>;
     private parsePayload?: (payload: any) => any;
     private transformMessageBody?: (messageBody: any) => any;
     private extendedLibraryCompatibility: boolean;
@@ -174,9 +174,8 @@ export class SqsConsumer {
             const messagesToDelete = await this.handleBatch(messagesWithPayload);
             if (messagesToDelete?.length) 
                 await this.deleteBatch(messagesToDelete);
-            else if (messagesToDelete === undefined) {
+            else if (messagesToDelete === undefined)
                 await this.deleteBatch(messages);
-            }
 
         } catch (err) {
             this.events.emit(SqsConsumerEvents.processingError, { err, messages });
