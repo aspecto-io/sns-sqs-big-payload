@@ -80,13 +80,13 @@ export class SqsProducer {
         return new SqsProducer(options);
     }
 
-    async sendJSON(message: unknown, options: SqsMessageOptions = {}): Promise<any> {
+    async sendJSON(message: unknown, options: SqsMessageOptions = {}, jsonPrefix:string): Promise<any> {
         const messageBody = JSON.stringify(message);
         const msgSize = Buffer.byteLength(messageBody, 'utf-8');
 
         if ((msgSize > this.messageSizeThreshold && this.largePayloadThoughS3) || this.allPayloadThoughS3) {
             const payloadId = uuid();
-            const payloadKey = `${payloadId}.json`;
+            const payloadKey = jsonPrefix ? `${jsonprefix}${payloadId}.json` : `${payloadId}.json`;
             const s3Response = await this.s3
                 .upload({
                     Bucket: this.s3Bucket,
