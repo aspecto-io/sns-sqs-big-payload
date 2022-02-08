@@ -87,7 +87,7 @@ export class SnsProducer {
 
         if ((msgSize > this.messageSizeThreshold && this.largePayloadThoughS3) || this.allPayloadThoughS3) {
             const payloadId = uuid();
-            const payloadKey = `${payloadId}.json`;
+            const payloadKey = this.extendedLibraryCompatibility ? payloadId : `${payloadId}.json`;
             const s3Response = await this.s3
                 .upload({
                     Bucket: this.s3Bucket,
@@ -131,7 +131,7 @@ export class SnsProducer {
 
     async publishS3Payload(
         s3PayloadMeta: S3PayloadMeta,
-        msgSize: number
+        msgSize?: number
     ): Promise<PromiseResult<aws.SNS.PublishResponse, aws.AWSError>> {
         const messageAttributes = this.extendedLibraryCompatibility
             ? createExtendedCompatibilityAttributeMap(msgSize)

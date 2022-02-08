@@ -86,7 +86,7 @@ export class SqsProducer {
 
         if ((msgSize > this.messageSizeThreshold && this.largePayloadThoughS3) || this.allPayloadThoughS3) {
             const payloadId = uuid();
-            const payloadKey = `${payloadId}.json`;
+            const payloadKey = this.extendedLibraryCompatibility ? payloadId : `${payloadId}.json`;
             const s3Response = await this.s3
                 .upload({
                     Bucket: this.s3Bucket,
@@ -135,7 +135,7 @@ export class SqsProducer {
     // into another queue without duplicating the s3 object
     async sendS3Payload(
         s3PayloadMeta: S3PayloadMeta,
-        msgSize: number,
+        msgSize?: number,
         options: SqsMessageOptions = {}
     ): Promise<PromiseResult<aws.SQS.SendMessageResult, aws.AWSError>> {
         const messageAttributes = this.extendedLibraryCompatibility
