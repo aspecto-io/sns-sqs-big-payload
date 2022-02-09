@@ -502,6 +502,28 @@ describe('sns-sqs-big-payload', () => {
                     expect(receivedMessage.s3PayloadMeta).toBeUndefined();
                 });
 
+                it('should produce messages in AWS client lib JSON format', async () => {
+                    const messageSizeThreshold = 1024;
+                    const message = 'x'.repeat(messageSizeThreshold + 1);
+                    const { s3Response } = await sendMessage(message, {
+                        largePayloadThoughS3: true,
+                        s3Bucket: TEST_BUCKET_NAME,
+                        messageSizeThreshold,
+                        extendedLibraryCompatibility: true,
+                    });
+                    const [receivedMessage] = await receiveMessages(1, {
+                        getPayloadFromS3: true,
+                        extendedLibraryCompatibility: true,
+                    });
+
+                    expect(JSON.parse(receivedMessage.message.Body)).toEqual(
+                        [
+                            "software.amazon.payloadoffloading.PayloadS3Pointer",
+                            {"s3BucketName":TEST_BUCKET_NAME,"s3Key":s3Response.Key}
+                        ]
+                    );
+                });
+
                 it('should be compatible with processing the message format of AWS client lib', async () => {
                     const messageSizeThreshold = 1024;
                     const message = 'x'.repeat(messageSizeThreshold + 1);
