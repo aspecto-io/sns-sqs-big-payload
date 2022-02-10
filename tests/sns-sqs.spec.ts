@@ -326,7 +326,7 @@ describe('sns-sqs-big-payload', () => {
                     const s3ObjectKey = await processAWSClientLibMessage(generateMessageTemplate);
 
                     expect(handlers[SqsConsumerEvents.s3extendedPayloadError]).toBeCalledWith({
-                        errorMessage: 'Invalid message format, expected an array with 2 elements',
+                        err: new Error('Invalid message format, expected an array with 2 elements'),
                         message: {
                             s3BucketName: TEST_BUCKET_NAME,
                             s3Key: s3ObjectKey,
@@ -340,7 +340,7 @@ describe('sns-sqs-big-payload', () => {
                     const s3ObjectKey = await processAWSClientLibMessage(generateMessageTemplate);
 
                     expect(handlers[SqsConsumerEvents.s3extendedPayloadError]).toBeCalledWith({
-                        errorMessage: 'Invalid message format, s3Key and s3BucketName fields are required',
+                        err: new Error('Invalid message format, s3Key and s3BucketName fields are required'),
                         message: [
                             "software.amazon.payloadoffloading.PayloadS3Pointer",
                             {
@@ -356,7 +356,7 @@ describe('sns-sqs-big-payload', () => {
                     await processAWSClientLibMessage(generateMessageTemplate);
 
                     expect(handlers[SqsConsumerEvents.s3extendedPayloadError]).toBeCalledWith({
-                        errorMessage: 'Invalid message format, s3Key and s3BucketName fields are required',
+                        err: new Error('Invalid message format, s3Key and s3BucketName fields are required'),
                         message: [
                             "software.amazon.payloadoffloading.PayloadS3Pointer",
                             {
@@ -372,7 +372,7 @@ describe('sns-sqs-big-payload', () => {
                     const s3ObjectKey = await processAWSClientLibMessage(generateMessageTemplate);
 
                     expect(handlers[SqsConsumerEvents.s3extendedPayloadError]).toBeCalledWith({
-                        errorMessage: 'Invalid message format, s3Key and s3BucketName fields are required',
+                        err: new Error('Invalid message format, s3Key and s3BucketName fields are required'),
                         message: [
                             "software.amazon.payloadoffloading.PayloadS3Pointer",
                             {
@@ -389,7 +389,7 @@ describe('sns-sqs-big-payload', () => {
                     const s3ObjectKey = await processAWSClientLibMessage(generateMessageTemplate);
 
                     expect(handlers[SqsConsumerEvents.s3extendedPayloadError]).toBeCalledWith({
-                        errorMessage: 'Invalid message format, s3Key and s3BucketName fields are required',
+                        err: new Error('Invalid message format, s3Key and s3BucketName fields are required'),
                         message: [
                             "software.amazon.payloadoffloading.PayloadS3Pointer",
                             {
@@ -406,7 +406,7 @@ describe('sns-sqs-big-payload', () => {
                     const s3ObjectKey = await processAWSClientLibMessage(generateMessageTemplate);
 
                     expect(handlers[SqsConsumerEvents.s3extendedPayloadError]).toBeCalledWith({
-                        errorMessage: 'Invalid message format, s3Key and s3BucketName fields are required',
+                        err: new Error('Invalid message format, s3Key and s3BucketName fields are required'),
                         message: [
                             "software.amazon.payloadoffloading.PayloadS3Pointer",
                             {
@@ -423,7 +423,7 @@ describe('sns-sqs-big-payload', () => {
                     await processAWSClientLibMessage(generateMessageTemplate);
 
                     expect(handlers[SqsConsumerEvents.s3extendedPayloadError]).toBeCalledWith({
-                        errorMessage: 'Invalid message format, s3Key and s3BucketName fields are required',
+                        err: new Error('Invalid message format, s3Key and s3BucketName fields are required'),
                         message: [
                             "software.amazon.payloadoffloading.PayloadS3Pointer",
                             {

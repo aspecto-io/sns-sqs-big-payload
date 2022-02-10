@@ -230,24 +230,24 @@ export class SqsConsumer {
         if (this.extendedLibraryCompatibility && attributes && attributes[SQS_LARGE_PAYLOAD_SIZE_ATTRIBUTE]) {
             const msgJson = s3Object as SqsExtendedPayloadMeta;
             if (!Array.isArray(msgJson) || msgJson.length !== 2) {
-                const errorMessage = 'Invalid message format, expected an array with 2 elements';
+                const err = new Error('Invalid message format, expected an array with 2 elements');
                 this.events.emit(SqsConsumerEvents.s3extendedPayloadError, {
-                    errorMessage,
+                    err,
                     message: s3Object,
                 });
-                throw new Error(errorMessage);
+                throw err;
             }
 
             const s3Key = msgJson[1]?.s3Key;
             const s3BucketName = msgJson[1]?.s3BucketName;
 
             if (!s3Key?.length || !s3BucketName?.length) {
-                const errorMessage = 'Invalid message format, s3Key and s3BucketName fields are required';
+                const err = new Error('Invalid message format, s3Key and s3BucketName fields are required');
                 this.events.emit(SqsConsumerEvents.s3extendedPayloadError, {
-                    errorMessage,
+                    err,
                     message: s3Object,
                 });
-                throw new Error(errorMessage);
+                throw err;
             }
 
             s3PayloadMeta = {
