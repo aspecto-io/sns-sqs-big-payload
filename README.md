@@ -46,7 +46,7 @@ const snsProducer = SnsProducer.create({
     // Opt-in to enable compatibility with
     // Amazon SQS Extended Client Java Library (and other compatible libraries).
     // see https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-s3-messages.html
-    extendedLibraryCompatibility: boolean;
+    extendedLibraryCompatibility: boolean,
     s3EndpointUrl: '...',
 });
 
@@ -68,7 +68,7 @@ const sqsProducer = SqsProducer.create({
     // Opt-in to enable compatibility with
     // Amazon SQS Extended Client Java Library (and other compatible libraries).
     // see https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-s3-messages.html
-    extendedLibraryCompatibility: boolean;
+    extendedLibraryCompatibility: boolean,
     s3Bucket: '...',
 });
 
@@ -104,7 +104,7 @@ const sqsConsumer = SqsConsumer.create({
     // Opt-in to enable compatibility with
     // Amazon SQS Extended Client Java Library (and other compatible libraries).
     // see https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-s3-messages.html
-    extendedLibraryCompatibility: boolean;
+    extendedLibraryCompatibility: boolean,
 });
 
 // to subscribe for events
@@ -181,19 +181,20 @@ sqsConsumer.on(SqsConsumerEvents.messageProcessed, () => {
 
 It sends the following events:
 
-| Event               | Params           | Description                                                                         |
-| ------------------- | ---------------- | ----------------------------------------------------------------------------------- |
-| started             | None             | Fires when the polling is started                                                   |
-| message-received    | `message`        | Fires when a message is received (one per each message, not per batch)              |
-| message-processed   | `message`        | Fires after the message is successfully processed and removed from the queue        |
-| batch-processed     | None             | Fires after the current batch of messages is processed.                             |
-| poll-ended          | None             | Fires after the polling cycle is ended. Useful for graceful shutdown.               |
-| stopped             | None             | Fires when the polling stops                                                        |
-| error               | `{err, message}` | Fires in case of processing error                                                   |
-| s3-payload-error    | `{err, message}` | Fires when an error occurs during downloading payload from s3                       |
-| processing-error    | `{err, message}` | Fires when an error occurs during processing (only inside `handleMessage` function) |
-| connection-error    | `err`            | Fires when a connection error occurs during polling (retriable)                     |
-| payload-parse-error | `err`            | Fires when a connection error occurs during parsing                                 |
+| Event                     | Params                 | Description                                                                         |
+| ------------------------- | ---------------------- | ----------------------------------------------------------------------------------- |
+| started                   | None                   | Fires when the polling is started                                                   |
+| message-received          | `message`              | Fires when a message is received (one per each message, not per batch)              |
+| message-processed         | `message`              | Fires after the message is successfully processed and removed from the queue        |
+| batch-processed           | None                   | Fires after the current batch of messages is processed.                             |
+| poll-ended                | None                   | Fires after the polling cycle is ended. Useful for graceful shutdown.               |
+| stopped                   | None                   | Fires when the polling stops                                                        |
+| error                     | `{err, message}`       | Fires in case of processing error                                                   |
+| s3-payload-error          | `{err, message}`       | Fires when an error occurs during downloading payload from s3                       |
+| s3-extended-payload-error | `{err, message}`       | Fires when a payload from s3 using extended compatibility is not in expected format |
+| processing-error          | `{err, message}`       | Fires when an error occurs during processing (only inside `handleMessage` function) |
+| connection-error          | `err`                  | Fires when a connection error occurs during polling (retriable)                     |
+| payload-parse-error       | `err`                  | Fires when a connection error occurs during parsing                                 |
 
 You can also use this enum if you're using TypeScript
 
@@ -207,6 +208,7 @@ enum SqsConsumerEvents {
     stopped = 'stopped',
     error = 'error',
     s3PayloadError = 's3-payload-error',
+    s3ExtendedPayloadError = 's3-extended-payload-error',
     processingError = 'processing-error',
     connectionError = 'connection-error',
     payloadParseError = 'payload-parse-error',
