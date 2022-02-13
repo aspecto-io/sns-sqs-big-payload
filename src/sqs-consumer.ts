@@ -3,7 +3,7 @@ import { EventEmitter } from 'events';
 import { Message, MessageBodyAttributeMap, ReceiveMessageRequest, ReceiveMessageResult } from 'aws-sdk/clients/sqs';
 import { AWSError } from 'aws-sdk';
 import { PayloadMeta, S3PayloadMeta, SqsExtendedPayloadMeta } from './types';
-import { SQS_LARGE_PAYLOAD_SIZE_ATTRIBUTE } from './util';
+import { SQS_LARGE_PAYLOAD_SIZE_ATTRIBUTE } from './constants';
 
 export interface SqsConsumerOptions {
     queueUrl: string;
@@ -38,6 +38,7 @@ export enum SqsConsumerEvents {
     pollEnded = 'poll-ended',
     error = 'error',
     s3PayloadError = 's3-payload-error',
+    s3extendedPayloadError = 's3-extended-payload-error',
     processingError = 'processing-error',
     connectionError = 'connection-error',
     payloadParseError = 'payload-parse-error',
@@ -172,7 +173,7 @@ export class SqsConsumer {
             }));
 
             const messagesToDelete = await this.handleBatch(messagesWithPayload);
-            if (messagesToDelete && messagesToDelete?.length) 
+            if (messagesToDelete && messagesToDelete?.length)
                 await this.deleteBatch(messagesToDelete);
             else if (messagesToDelete === undefined)
                 await this.deleteBatch(messages);
@@ -228,9 +229,30 @@ export class SqsConsumer {
         const s3Object: SqsExtendedPayloadMeta | PayloadMeta = JSON.parse(messageBody);
         if (this.extendedLibraryCompatibility && attributes && attributes[SQS_LARGE_PAYLOAD_SIZE_ATTRIBUTE]) {
             const msgJson = s3Object as SqsExtendedPayloadMeta;
+            if (!Array.isArray(msgJson) || msgJson.length !== 2) {
+                const err = new Error('Invalid message format, expected an array with 2 elements');
+                this.events.emit(SqsConsumerEvents.s3extendedPayloadError, {
+                    err,
+                    message: s3Object,
+                });
+                throw err;
+            }
+
+            const s3Key = msgJson[1]?.s3Key;
+            const s3BucketName = msgJson[1]?.s3BucketName;
+
+            if (!s3Key?.length || !s3BucketName?.length) {
+                const err = new Error('Invalid message format, s3Key and s3BucketName fields are required');
+                this.events.emit(SqsConsumerEvents.s3extendedPayloadError, {
+                    err,
+                    message: s3Object,
+                });
+                throw err;
+            }
+
             s3PayloadMeta = {
-                Bucket: msgJson.s3BucketName,
-                Key: msgJson.s3Key,
+                Bucket: s3BucketName,
+                Key: s3Key,
                 Id: 'not available in extended compatibility mode',
                 Location: 'not available in extended compatibility mode',
             };
