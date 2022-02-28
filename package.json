@@ -1,5 +1,5 @@
 {
-    "name": "sns-sqs-big-payload",
+    "name": "@riseart/sns-sqs-big-payload",
     "version": "0.1.3",
     "license": "Apache-2.0",
     "main": "dist/index.js",
