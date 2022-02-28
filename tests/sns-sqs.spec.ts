@@ -10,6 +10,7 @@ import {
 } from '../src';
 
 import * as aws from 'aws-sdk';
+import { MessageAttributeMap } from 'aws-sdk/clients/sns';
 import { v4 as uuid } from 'uuid';
 import { S3PayloadMeta } from '../src/types';
 
@@ -138,9 +139,9 @@ const getSnsProducer = (options: Partial<SnsProducerOptions> = {}) => {
     });
 };
 
-async function publishMessage(msg: any, options?: Partial<SnsProducerOptions>) {
+async function publishMessage(msg: any, options?: Partial<SnsProducerOptions>, attributes?: MessageAttributeMap) {
     const snsProducer = getSnsProducer(options);
-    await snsProducer.publishJSON(msg);
+    await snsProducer.publishJSON(msg, attributes);
 }
 
 async function publishS3Payload(s3PayloadMeta: S3PayloadMeta, options?: Partial<SnsProducerOptions>) {
@@ -152,7 +153,7 @@ async function receiveMessages(
     expectedMsgsCount: number,
     options: Partial<SqsConsumerOptions> = {},
     eventHandlers?: Record<string | symbol, (...args) => void>
-): Promise<SqsMessage[]> {
+): Promise<SqsMessage[] | void> {
     const { s3 } = getClients();
     return new Promise((resolve, rej) => {
         const messages: SqsMessage[] = [];
@@ -603,6 +604,24 @@ describe('sns-sqs-big-payload', () => {
                 });
                 expect(receivedMessage.payload).toEqual(message);
             });
+
+            it('should publish and receive the message with SNS message attributes', async () => {
+                const message = { it: 'works' };
+                const attributes = {
+                    testAttribute: {
+                        DataType: 'String',
+                        StringValue: 'AttrubuteValue',
+                    }
+                };
+                await publishMessage(message, {}, attributes);
+                const [receivedMessage] = await receiveMessages(1, {
+                    transformMessageBody: (body) => {
+                        const snsMessage = JSON.parse(body);
+                        return snsMessage.Message;
+                    },
+                });
+                expect(receivedMessage.payload).toEqual(message);
+            });
         });
 
         describe('publishing message through s3', () => {
@@ -642,6 +661,26 @@ describe('sns-sqs-big-payload', () => {
                 });
                 expect(reReceivedMessage.payload).toEqual(message);
                 expect(reReceivedMessage.s3PayloadMeta).toEqual(receivedMessage.s3PayloadMeta);
+            });
+
+            it('should send payload though s3 with SNS message attributes', async () => {
+                const message = { it: 'works' };
+                const attributes = {
+                    testAttribute: {
+                        DataType: 'String',
+                        StringValue: 'AttrubuteValue',
+                    }
+                };
+                await publishMessage(message, { allPayloadThoughS3: true, s3Bucket: TEST_BUCKET_NAME }, attributes);
+                const [receivedMessage] = await receiveMessages(1, {
+                    getPayloadFromS3: true,
+                    // since it's SNS message we need to unwrap sns envelope first
+                    transformMessageBody: (body) => {
+                        const snsMessage = JSON.parse(body);
+                        return snsMessage.Message;
+                    },
+                });
+                expect(receivedMessage.payload).toEqual(message);
             });
         });
     });
