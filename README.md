@@ -77,6 +77,17 @@ await sqsProducer.sendJSON({
 });
 ```
 
+The sendJSON method of sqs producer also supports an optional sqs message options argument.
+
+```ts
+SqsMessageOptions {
+    DelaySeconds?: number;
+    MessageDeduplicationId?: string;
+    MessageGroupId?: string;
+    MessageAttributes?: MessageBodyAttributeMap;
+}
+```
+
 ### SQS Consumer
 
 ```ts

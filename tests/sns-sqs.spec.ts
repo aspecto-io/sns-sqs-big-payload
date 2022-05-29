@@ -7,8 +7,10 @@ import {
     SnsProducerOptions,
     SnsProducer,
     SqsMessage,
+    SqsMessageOptions
 } from '../src';
 
+import { MessageAttributeMap } from 'aws-sdk/clients/sns';
 import * as aws from 'aws-sdk';
 import { v4 as uuid } from 'uuid';
 import { S3PayloadMeta } from '../src/types';
@@ -89,12 +91,12 @@ const getSqsProducer = (options: Partial<SqsProducerOptions> = {}) => {
     });
 };
 
-async function sendMessage(msg: any, options?: Partial<SqsProducerOptions>) {
+async function sendMessage(msg: any, options?: Partial<SqsProducerOptions>, sqsMessageOptions?:SqsMessageOptions) {
     const sqsProducer = getSqsProducer(options);
-    return await sqsProducer.sendJSON(msg);
+    return await sqsProducer.sendJSON(msg, sqsMessageOptions);
 }
 
-async function sendS3Payload(s3PayloadMeta: S3PayloadMeta, options: Partial<SqsProducerOptions>) {
+async function sendS3Payload(s3PayloadMeta: S3PayloadMeta, options: Partial<SqsProducerOptions>, sqsMessageOptions?:SqsMessageOptions) {
     const sqsProducer = getSqsProducer(options);
     return await sqsProducer.sendS3Payload(s3PayloadMeta);
 }
@@ -234,6 +236,27 @@ describe('sns-sqs-big-payload', () => {
                 await sendMessage(message);
                 const [receivedMessage] = await receiveMessages(1);
                 expect(receivedMessage.payload).toEqual(message);
+            });
+        });
+
+        describe('sending messages with MessageAttributes', () => {
+            it('should send and receive the message', async () => {
+                const message = { it: 'works' };
+                const sqsMessageOptions = {
+                    MessageAttributes: {
+                        testAttribute: {
+                            DataType: 'String',
+                            StringValue: 'test',
+                            StringListValues:[],
+                            BinaryListValues:[]
+                        }
+                    }
+                };
+
+                await sendMessage(message, {}, sqsMessageOptions);
+                const [receivedMessage] = await receiveMessages(1);
+                expect(receivedMessage.payload).toEqual(message);
+                expect(receivedMessage.message.MessageAttributes).toEqual(sqsMessageOptions.MessageAttributes);
             });
         });
 
@@ -442,6 +465,27 @@ describe('sns-sqs-big-payload', () => {
                 await sendMessage(message, { allPayloadThoughS3: true, s3Bucket: TEST_BUCKET_NAME });
                 const [receivedMessage] = await receiveMessages(1, { getPayloadFromS3: true });
                 expect(receivedMessage.payload).toEqual(message);
+                expect(receivedMessage.s3PayloadMeta.Bucket).toEqual(TEST_BUCKET_NAME);
+                expect(receivedMessage.s3PayloadMeta.Key).toBeDefined();
+            });
+
+            it('should send message though s3 with MessageAttributes', async () => {
+                const message = { it: 'works' };
+                const sqsMessageOptions = {
+                    MessageAttributes: {
+                        testAttribute: {
+                            DataType: 'String',
+                            StringValue: 'test',
+                            StringListValues:[],
+                            BinaryListValues:[]
+                        }
+                    }
+                };
+
+                await sendMessage(message, { allPayloadThoughS3: true, s3Bucket: TEST_BUCKET_NAME }, sqsMessageOptions);
+                const [receivedMessage] = await receiveMessages(1, { getPayloadFromS3: true });
+                expect(receivedMessage.payload).toEqual(message);
+                expect(receivedMessage.message.MessageAttributes).toEqual(sqsMessageOptions.MessageAttributes);
                 expect(receivedMessage.s3PayloadMeta.Bucket).toEqual(TEST_BUCKET_NAME);
                 expect(receivedMessage.s3PayloadMeta.Key).toBeDefined();
             });
