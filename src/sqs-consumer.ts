@@ -16,7 +16,7 @@ export interface SqsConsumerOptions {
     sqsEndpointUrl?: string;
     s3EndpointUrl?: string;
     handleMessage?(message: SqsMessage): Promise<void>;
-    handleBatch?(messages: SqsMessage[]): Promise<Message[]|void>;
+    handleBatch?(messages: SqsMessage[]): Promise<Message[] | void>;
     parsePayload?(payload: any): any;
     transformMessageBody?(messageBody: any): any;
     // Opt-in to enable compatibility with
@@ -61,7 +61,7 @@ export class SqsConsumer {
     private events = new EventEmitter();
     private connErrorTimeout = 10000;
     private handleMessage?: (message: SqsMessage) => Promise<void>;
-    private handleBatch?: (messagesWithPayload: SqsMessage[]) => Promise<Message[]|void>;
+    private handleBatch?: (messagesWithPayload: SqsMessage[]) => Promise<Message[] | void>;
     private parsePayload?: (payload: any) => any;
     private transformMessageBody?: (messageBody: any) => any;
     private extendedLibraryCompatibility: boolean;
@@ -161,23 +161,22 @@ export class SqsConsumer {
 
     private async processBatch(messages: Message[]) {
         try {
-            const messagesWithPayload = await Promise.all(messages.map(async message => {
-                const { payload, s3PayloadMeta } = await this.preparePayload(message);
-                const messageWithPayload = {
-                    message,
-                    payload,
-                    s3PayloadMeta,
-                };
+            const messagesWithPayload = await Promise.all(
+                messages.map(async (message) => {
+                    const { payload, s3PayloadMeta } = await this.preparePayload(message);
+                    const messageWithPayload = {
+                        message,
+                        payload,
+                        s3PayloadMeta,
+                    };
 
-                return messageWithPayload;
-            }));
+                    return messageWithPayload;
+                })
+            );
 
             const messagesToDelete = await this.handleBatch(messagesWithPayload);
-            if (messagesToDelete && messagesToDelete?.length)
-                await this.deleteBatch(messagesToDelete);
-            else if (messagesToDelete === undefined)
-                await this.deleteBatch(messages);
-
+            if (messagesToDelete && messagesToDelete?.length) await this.deleteBatch(messagesToDelete);
+            else if (messagesToDelete === undefined) await this.deleteBatch(messages);
         } catch (err) {
             this.events.emit(SqsConsumerEvents.processingError, { err, messages });
         }
@@ -191,7 +190,7 @@ export class SqsConsumer {
         return {
             payload,
             s3PayloadMeta,
-        }
+        };
     }
 
     private async processMsg(
@@ -226,56 +225,59 @@ export class SqsConsumer {
             return { rawPayload: messageBody };
         }
         let s3PayloadMeta: S3PayloadMeta;
-        const s3Object: SqsExtendedPayloadMeta | PayloadMeta = JSON.parse(messageBody);
-        if (this.extendedLibraryCompatibility && attributes && attributes[SQS_LARGE_PAYLOAD_SIZE_ATTRIBUTE]) {
-            const msgJson = s3Object as SqsExtendedPayloadMeta;
-            if (!Array.isArray(msgJson) || msgJson.length !== 2) {
-                const err = new Error('Invalid message format, expected an array with 2 elements');
-                this.events.emit(SqsConsumerEvents.s3extendedPayloadError, {
-                    err,
-                    message: s3Object,
-                });
-                throw err;
+        try {
+            const s3Object: SqsExtendedPayloadMeta | PayloadMeta = JSON.parse(messageBody);
+            if (this.extendedLibraryCompatibility && attributes && attributes[SQS_LARGE_PAYLOAD_SIZE_ATTRIBUTE]) {
+                const msgJson = s3Object as SqsExtendedPayloadMeta;
+                if (!Array.isArray(msgJson) || msgJson.length !== 2) {
+                    const err = new Error('Invalid message format, expected an array with 2 elements');
+                    this.events.emit(SqsConsumerEvents.s3extendedPayloadError, {
+                        err,
+                        message: s3Object,
+                    });
+                    throw err;
+                }
+
+                const s3Key = msgJson[1]?.s3Key;
+                const s3BucketName = msgJson[1]?.s3BucketName;
+
+                if (!s3Key?.length || !s3BucketName?.length) {
+                    const err = new Error('Invalid message format, s3Key and s3BucketName fields are required');
+                    this.events.emit(SqsConsumerEvents.s3extendedPayloadError, {
+                        err,
+                        message: s3Object,
+                    });
+                    throw err;
+                }
+
+                s3PayloadMeta = {
+                    Bucket: s3BucketName,
+                    Key: s3Key,
+                    Id: 'not available in extended compatibility mode',
+                    Location: 'not available in extended compatibility mode',
+                };
+            } else {
+                const msgJson = s3Object as PayloadMeta;
+                s3PayloadMeta = msgJson?.S3Payload;
             }
-
-            const s3Key = msgJson[1]?.s3Key;
-            const s3BucketName = msgJson[1]?.s3BucketName;
-
-            if (!s3Key?.length || !s3BucketName?.length) {
-                const err = new Error('Invalid message format, s3Key and s3BucketName fields are required');
-                this.events.emit(SqsConsumerEvents.s3extendedPayloadError, {
-                    err,
-                    message: s3Object,
-                });
-                throw err;
+            if (s3PayloadMeta) {
+                try {
+                    const s3Response = await this.s3
+                        .getObject({ Bucket: s3PayloadMeta.Bucket, Key: s3PayloadMeta.Key })
+                        .promise();
+                    return { rawPayload: s3Response.Body, s3PayloadMeta };
+                } catch (err) {
+                    this.events.emit(SqsConsumerEvents.s3PayloadError, {
+                        err,
+                        message: s3Object,
+                    });
+                    throw err;
+                }
             }
-
-            s3PayloadMeta = {
-                Bucket: s3BucketName,
-                Key: s3Key,
-                Id: 'not available in extended compatibility mode',
-                Location: 'not available in extended compatibility mode',
-            };
-        } else {
-            const msgJson = s3Object as PayloadMeta;
-            s3PayloadMeta = msgJson?.S3Payload;
+            return { rawPayload: messageBody };
+        } catch (error) {
+            return { rawPayload: messageBody };
         }
-        if (s3PayloadMeta) {
-            try {
-                const s3Response = await this.s3
-                    .getObject({ Bucket: s3PayloadMeta.Bucket, Key: s3PayloadMeta.Key })
-                    .promise();
-                return { rawPayload: s3Response.Body, s3PayloadMeta };
-            } catch (err) {
-                this.events.emit(SqsConsumerEvents.s3PayloadError, {
-                    err,
-                    message: s3Object,
-                });
-                throw err;
-            }
-        }
-
-        return { rawPayload: messageBody };
     }
 
     private parseMessagePayload(rawPayload: any) {
