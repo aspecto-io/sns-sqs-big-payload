@@ -1,5 +1,6 @@
 import * as aws from 'aws-sdk';
 import { PromiseResult } from 'aws-sdk/lib/request';
+import { MessageBodyAttributeMap } from 'aws-sdk/clients/sqs';
 import { v4 as uuid } from 'uuid';
 import { S3PayloadMeta } from './types';
 import {
@@ -31,6 +32,7 @@ export interface SqsMessageOptions {
     DelaySeconds?: number;
     MessageDeduplicationId?: string;
     MessageGroupId?: string;
+    MessageAttributes?: MessageBodyAttributeMap
 }
 
 export class SqsProducer {
@@ -122,6 +124,7 @@ export class SqsProducer {
                 DelaySeconds: options.DelaySeconds,
                 MessageDeduplicationId: options.MessageDeduplicationId,
                 MessageGroupId: options.MessageGroupId,
+                MessageAttributes: options.MessageAttributes || {}
             })
             .promise();
 
@@ -138,9 +141,13 @@ export class SqsProducer {
         msgSize?: number,
         options: SqsMessageOptions = {}
     ): Promise<PromiseResult<aws.SQS.SendMessageResult, aws.AWSError>> {
-        const messageAttributes = this.extendedLibraryCompatibility
-            ? createExtendedCompatibilityAttributeMap(msgSize)
-            : {};
+        const messageAttributes = {
+            ...(options.MessageAttributes || {}),
+            ...(this.extendedLibraryCompatibility
+                ? createExtendedCompatibilityAttributeMap(msgSize)
+                : {}
+            )
+        };
         return await this.sqs
             .sendMessage({
                 QueueUrl: this.queueUrl,
@@ -150,7 +157,7 @@ export class SqsProducer {
                 DelaySeconds: options.DelaySeconds,
                 MessageDeduplicationId: options.MessageDeduplicationId,
                 MessageGroupId: options.MessageGroupId,
-                MessageAttributes: messageAttributes,
+                MessageAttributes: messageAttributes
             })
             .promise();
     }

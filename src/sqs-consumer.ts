@@ -128,7 +128,7 @@ export class SqsConsumer {
                     QueueUrl: this.queueUrl,
                     MaxNumberOfMessages: this.batchSize,
                     WaitTimeSeconds: this.waitTimeSeconds,
-                    MessageAttributeNames: [SQS_LARGE_PAYLOAD_SIZE_ATTRIBUTE],
+                    MessageAttributeNames: ['All'],
                 });
                 if (!this.started) return;
                 await this.handleSqsResponse(response);
