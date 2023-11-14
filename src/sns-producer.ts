@@ -1,5 +1,6 @@
 import * as aws from 'aws-sdk';
 import { PromiseResult } from 'aws-sdk/lib/request';
+import { MessageAttributeMap } from 'aws-sdk/clients/sns';
 import { v4 as uuid } from 'uuid';
 import { S3PayloadMeta } from './types';
 import {
@@ -81,7 +82,7 @@ export class SnsProducer {
         return new SnsProducer(options);
     }
 
-    async publishJSON(message: unknown): Promise<PublishResult> {
+    async publishJSON(message: unknown, snsMessageAttributes?: MessageAttributeMap): Promise<PublishResult> {
         const messageBody = JSON.stringify(message);
         const msgSize = Buffer.byteLength(messageBody, 'utf-8');
 
@@ -104,7 +105,8 @@ export class SnsProducer {
                     Key: s3Response.Key,
                     Location: s3Response.Location,
                 },
-                msgSize
+                msgSize,
+                snsMessageAttributes
             );
 
             return {
@@ -121,6 +123,7 @@ export class SnsProducer {
             .publish({
                 Message: messageBody,
                 TopicArn: this.topicArn,
+                MessageAttributes: snsMessageAttributes || {},
             })
             .promise();
 
@@ -131,11 +134,17 @@ export class SnsProducer {
 
     async publishS3Payload(
         s3PayloadMeta: S3PayloadMeta,
-        msgSize?: number
+        msgSize?: number,
+        snsMessageAttributes?: MessageAttributeMap
     ): Promise<PromiseResult<aws.SNS.PublishResponse, aws.AWSError>> {
-        const messageAttributes = this.extendedLibraryCompatibility
-            ? createExtendedCompatibilityAttributeMap(msgSize)
-            : {};
+        const messageAttributes = {
+            ...(snsMessageAttributes || {}),
+            ...(this.extendedLibraryCompatibility
+                ? createExtendedCompatibilityAttributeMap(msgSize)
+                : {}
+            )
+        };
+
         return await this.sns
             .publish({
                 Message: this.extendedLibraryCompatibility
