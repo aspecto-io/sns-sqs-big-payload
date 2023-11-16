@@ -50,7 +50,7 @@ const snsProducer = SnsProducer.create({
     s3EndpointUrl: '...',
 });
 
-await snsProducer.sendJSON({
+await snsProducer.publishJSON({
     // ...
 });
 ```
